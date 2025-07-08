@@ -1,11 +1,16 @@
 set(GAME_SOURCES
         Source/Main.cpp
+        Source/Game/Application.cpp
 )
 
-add_executable(${PROJECT_NAME} ${GAME_SOURCES})
-
-target_link_libraries(${PROJECT_NAME} PRIVATE Engine)
-
-set_property(
-        DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Game
+set(GAME_HEADERS
+        Include/Game/Application.hpp
 )
+
+add_executable(${CMAKE_PROJECT_NAME} ${GAME_SOURCES} ${GAME_HEADERS})
+
+target_include_directories(${CMAKE_PROJECT_NAME} PUBLIC Include PRIVATE Source)
+
+target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE Engine)
+
+set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${CMAKE_PROJECT_NAME})

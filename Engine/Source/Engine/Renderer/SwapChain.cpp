@@ -80,8 +80,8 @@ namespace Engine::Renderer
     const vk::PresentModeKHR PresentMode = ChoosePresentMode( m_PresentModes );
     const vk::Extent2D       Extent      = ChooseExtent( m_Capabilities );
 
-    if ( u32 imageCount = m_Capabilities.minImageCount + 1;
-         m_Capabilities.maxImageCount > 0 &&
+    u32 imageCount = m_Capabilities.minImageCount + 1;
+    if ( m_Capabilities.maxImageCount > 0 &&
          imageCount > m_Capabilities.maxImageCount )
     {
       imageCount = m_Capabilities.maxImageCount;
@@ -89,6 +89,7 @@ namespace Engine::Renderer
 
     vk::SwapchainCreateInfoKHR swapChain = {};
     swapChain.surface                    = m_Surface;
+    swapChain.minImageCount              = imageCount;
     swapChain.imageFormat                = Surface.format;
     swapChain.imageColorSpace            = Surface.colorSpace;
     swapChain.imageExtent                = Extent;

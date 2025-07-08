@@ -53,7 +53,7 @@ namespace Engine::Renderer
 
     if ( devices.empty() )
     {
-      throw std::runtime_error( "Failed to find a GPU with Vulkan support!" );
+      LOG_ERROR( "Failed to find a GPU with Vulkan support!" );
     }
 
     for ( const auto & device : devices )
@@ -67,7 +67,7 @@ namespace Engine::Renderer
 
     if ( !m_PhysicalDevice )
     {
-      throw std::runtime_error( "Failed to find a suitable GPU!" );
+      LOG_FATAL( "Failed to find a suitable GPU with Vulkan support!" );
     }
 
     auto props = m_PhysicalDevice.getProperties();
@@ -111,6 +111,7 @@ namespace Engine::Renderer
     {
       throw std::runtime_error(
         std::format( "Failed to create logical device: {}", E.what() ) );
+      // LOG_FATAL( "Failed to create logical device!\n\t{}", E.what() );
     }
 
     m_GraphicsQueue =

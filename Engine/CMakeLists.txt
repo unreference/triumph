@@ -2,6 +2,7 @@ set(ENGINE_SOURCES
         Source/Engine/Utility/Logger.cpp
         Source/Engine/Renderer/Device.cpp
         Source/Engine/Renderer/SwapChain.cpp
+        Source/Engine/Renderer/Renderer.cpp
 )
 
 set(ENGINE_HEADERS
@@ -14,6 +15,7 @@ set(ENGINE_HEADERS
         Include/Engine/Utility/Logger.hpp
         Include/Engine/Renderer/Device.hpp
         Include/Engine/Renderer/SwapChain.hpp
+        Include/Engine/Renderer/Renderer.hpp
 )
 
 if (WIN32)

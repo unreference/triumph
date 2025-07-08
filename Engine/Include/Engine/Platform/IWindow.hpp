@@ -1,8 +1,12 @@
 #pragma once
 
 #include <functional>
+#include <memory>
+
+#include <vulkan/vulkan.hpp>
 
 #include "Engine/Core/Types.hpp"
+#include "Engine/Core/Result.hpp"
 
 #include "WindowEvents.hpp"
 
@@ -45,8 +49,7 @@ namespace Engine::Platform
     [[nodiscard]] virtual u32         GetHeight() const             = 0;
     [[nodiscard]] virtual bool        IsVsynced() const             = 0;
     [[nodiscard]] virtual bool        IsFullScreen() const          = 0;
-
-    [[nodiscard]] virtual void * GetNativeHandle() const = 0;
+    [[nodiscard]] virtual void *      GetNativeHandle() const       = 0;
 
     virtual void SetTitle( const std::string & title )      = 0;
     virtual void SetSize( u32 width, u32 height )           = 0;

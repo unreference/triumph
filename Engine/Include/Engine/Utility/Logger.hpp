@@ -114,6 +114,7 @@ namespace Engine::Utility
                          const LogMessage &  message );
 
     static LogSeverity s_LogSeverity;
+    static bool        s_IsDebugBreakEnabled;
   };
 } // namespace Engine::Utility
 

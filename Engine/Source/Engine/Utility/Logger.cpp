@@ -5,7 +5,8 @@
 
 namespace Engine::Utility
 {
-  Logger::LogSeverity Logger::s_LogSeverity = LogSeverity::m_Info;
+  Logger::LogSeverity Logger::s_LogSeverity         = LogSeverity::m_Info;
+  bool                Logger::s_IsDebugBreakEnabled = false;
 
   void Logger::SetSeverity( const LogSeverity severity )
   {
@@ -48,15 +49,17 @@ namespace Engine::Utility
 
       case LogSeverity::m_Error:
       {
-        pLevelStr  = "ERROR";
-        pColorCode = "\033[31m";
+        pLevelStr             = "ERROR";
+        pColorCode            = "\033[31m";
+        s_IsDebugBreakEnabled = true;
         break;
       }
 
       case LogSeverity::m_Fatal:
       {
-        pLevelStr  = "FATAL";
-        pColorCode = "\033[35m";
+        pLevelStr             = "FATAL";
+        pColorCode            = "\033[35m";
+        s_IsDebugBreakEnabled = true;
         break;
       }
     }
@@ -71,11 +74,21 @@ namespace Engine::Utility
     ss << std::put_time( std::localtime( &TimeT ), "%H:%M:%S" );
     ss << '.' << std::setfill( '0' ) << std::setw( 3 ) << Ms.count();
 
-    // [HH:MM:SS.mm] [LEVEL] [file:line(function)] message
+    // [HH:MM:SS.mm] [LEVEL] file:line(function) message
     std::cout << pColorCode << '[' << ss.str() << "] [" << pLevelStr << "] "
-              << '[' << metadata.m_SourceInfo.m_pFileName << ':'
+              << metadata.m_SourceInfo.m_pFileName << ':'
               << metadata.m_SourceInfo.m_Line << "("
-              << metadata.m_SourceInfo.m_pFunctionName << ")] "
+              << metadata.m_SourceInfo.m_pFunctionName << ") "
               << message.m_FormattedMessage << "\033[0m" << std::endl;
+
+    if ( s_IsDebugBreakEnabled )
+    {
+      __debugbreak();
+    }
+
+    if ( metadata.m_Severity == LogSeverity::m_Fatal )
+    {
+      std::exit( EXIT_FAILURE );
+    }
   }
 } // namespace Engine::Utility

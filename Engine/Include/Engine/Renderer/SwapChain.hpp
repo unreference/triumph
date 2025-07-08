@@ -8,7 +8,10 @@
 namespace Engine::Renderer
 {
   class Device;
+}
 
+namespace Engine::Renderer
+{
   class SwapChain
   {
     DISALLOW_COPY( SwapChain );

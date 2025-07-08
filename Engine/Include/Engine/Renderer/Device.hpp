@@ -20,7 +20,7 @@ namespace Engine::Renderer
       std::optional<u32> m_GraphicsFamily = {};
       std::optional<u32> m_PresentFamily  = {};
 
-      bool IsComplete() const
+      [[nodiscard]] bool IsComplete() const
       {
         return m_GraphicsFamily.has_value() && m_PresentFamily.has_value();
       }
@@ -29,11 +29,11 @@ namespace Engine::Renderer
     explicit Device( vk::Instance instance, vk::SurfaceKHR surface );
     ~Device() = default;
 
-    vk::Device                 Get() const;
-    vk::PhysicalDevice         GetPhysicalDevice() const;
-    vk::Queue                  GetGraphicsQueue() const;
-    vk::Queue                  GetPresentQueue() const;
-    const QueueFamilyIndices & GetQueueFamilyIndices() const;
+    [[nodiscard]] vk::Device                 Get() const;
+    [[nodiscard]] vk::PhysicalDevice         GetPhysicalDevice() const;
+    [[nodiscard]] vk::Queue                  GetGraphicsQueue() const;
+    [[nodiscard]] vk::Queue                  GetPresentQueue() const;
+    [[nodiscard]] const QueueFamilyIndices & GetQueueFamilyIndices() const;
 
     void Wait() const;
 
