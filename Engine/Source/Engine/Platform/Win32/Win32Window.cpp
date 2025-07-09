@@ -2,12 +2,12 @@
 
 #include <vector>
 #include <memory>
-#include <exception>
 
 #include <vulkan/vulkan.hpp>
 
 #include "Engine/Core/Result.hpp"
 #include "Engine/Utility/Logger.hpp"
+#include "Engine/Utility/String.hpp"
 
 #include "Engine/Platform/Win32/Win32Window.hpp"
 
@@ -16,8 +16,6 @@ namespace Engine::Platform::Win32
   bool Win32Window::s_IsClassRegistered = false;
 
   Win32Window::Win32Window( const WindowProps & props )
-    : m_pHandle( nullptr )
-    , m_pInstance( nullptr )
   {
     Init( props );
   }
@@ -113,12 +111,8 @@ namespace Engine::Platform::Win32
   {
     m_Data.m_Title = title;
 
-    const int Length =
-      MultiByteToWideChar( CP_UTF8, 0, title.c_str(), -1, nullptr, 0 );
-    std::wstring wide( Length, 0 );
-    MultiByteToWideChar( CP_UTF8, 0, title.c_str(), -1, wide.data(), Length );
-
-    SetWindowTextW( m_pHandle, wide.c_str() );
+    const auto Wide = Utility::String::ToUtf16( title );
+    SetWindowTextW( m_pHandle, Wide.c_str() );
   }
 
   void Win32Window::SetSize( const u32 width, const u32 height )
@@ -155,10 +149,10 @@ namespace Engine::Platform::Win32
       m_Data.m_WindowedStyle =
         static_cast<DWORD>( GetWindowLongPtrW( m_pHandle, GWL_STYLE ) );
 
-      HMONITOR Monitor =
+      HMONITOR monitor =
         MonitorFromWindow( m_pHandle, MONITOR_DEFAULTTONEAREST );
       MONITORINFO info = { sizeof( MONITORINFO ) };
-      GetMonitorInfoW( Monitor, &info );
+      GetMonitorInfoW( monitor, &info );
 
       SetWindowLongPtrW( m_pHandle, GWL_STYLE, WS_POPUP );
       SetWindowPos(
@@ -190,28 +184,30 @@ namespace Engine::Platform::Win32
     m_Data.m_IsVsynced    = props.m_IsVsynced;
     m_Data.m_IsFullScreen = props.m_IsFullScreen;
     m_Data.m_ShouldClose  = false;
+    m_pInstance           = GetModuleHandleW( nullptr );
 
-    m_pInstance = GetModuleHandleW( nullptr );
+    LOG_INFO( "Creating Win32 window... (title={}, width={}, "
+              "height={}, vsynced={})",
+              m_Data.m_Title, m_Data.m_Width, m_Data.m_Height,
+              m_Data.m_IsVsynced );
 
     if ( !s_IsClassRegistered )
     {
-      WNDCLASSEXW wc = {};
-      wc.cbSize      = sizeof( WNDCLASSEXW );
-      wc.style       = CS_HREDRAW | CS_VREDRAW;
-      wc.lpfnWndProc = WindowProc;
-      wc.hInstance   = m_pInstance;
-      wc.hIcon =
-        LoadIconW( nullptr, reinterpret_cast<LPCWSTR>( IDI_APPLICATION ) );
-      wc.hCursor =
-        LoadCursorW( nullptr, reinterpret_cast<LPCWSTR>( IDC_ARROW ) );
+      WNDCLASSEXW wc   = {};
+      wc.cbSize        = sizeof( WNDCLASSEXW );
+      wc.style         = CS_HREDRAW | CS_VREDRAW;
+      wc.lpfnWndProc   = WindowProc;
+      wc.hInstance     = m_pInstance;
+      wc.hIcon         = LoadIcon( nullptr, IDI_APPLICATION );
+      wc.hCursor       = LoadCursor( nullptr, IDC_ARROW );
       wc.hbrBackground = nullptr;
       wc.lpszClassName = s_pClassName;
-      wc.hIconSm =
-        LoadIconW( nullptr, reinterpret_cast<LPCWSTR>( IDI_APPLICATION ) );
+      wc.hIconSm       = LoadIcon( nullptr, IDI_APPLICATION );
 
       if ( !RegisterClassExW( &wc ) )
       {
-        throw std::runtime_error( "Failed to register Win32 window class!" );
+        auto Error = Utility::String::GetLastWin32Error();
+        LOG_FATAL( "Failed to register window class: {}", Error );
       }
 
       s_IsClassRegistered = true;
@@ -220,7 +216,7 @@ namespace Engine::Platform::Win32
     DWORD style = WS_OVERLAPPEDWINDOW;
     if ( !props.m_IsResizable )
     {
-      style &= WS_THICKFRAME | WS_MAXIMIZEBOX;
+      style &= ~( WS_THICKFRAME | WS_MAXIMIZEBOX );
     }
 
     if ( !props.m_IsDecorated )
@@ -240,19 +236,15 @@ namespace Engine::Platform::Win32
     const i32 WindowX      = ( ScreenWidth - WindowWidth ) / 2;
     const i32 WindowY      = ( ScreenHeight - WindowHeight ) / 2;
 
-    const int Length =
-      MultiByteToWideChar( CP_UTF8, 0, props.m_Title.c_str(), -1, nullptr, 0 );
-    std::wstring wideTitle( Length, 0 );
-    MultiByteToWideChar( CP_UTF8, 0, props.m_Title.c_str(), -1,
-                         wideTitle.data(), Length );
-
-    m_pHandle = CreateWindowExW( 0, s_pClassName, wideTitle.c_str(), style,
-                                 WindowX, WindowY, WindowWidth, WindowHeight,
-                                 nullptr, nullptr, m_pInstance, &m_Data );
+    const auto Wide = Utility::String::ToUtf16( props.m_Title );
+    m_pHandle = CreateWindowExW( 0, s_pClassName, Wide.c_str(), style, WindowX,
+                                 WindowY, WindowWidth, WindowHeight, nullptr,
+                                 nullptr, m_pInstance, &m_Data );
 
     if ( !m_pHandle )
     {
-      throw std::runtime_error( "Failed to create Win32 window!" );
+      const auto Error = Utility::String::GetLastWin32Error();
+      LOG_FATAL( "Failed to create Win32 window: {}", Error );
     }
 
     GetWindowRect( m_pHandle, &m_Data.m_WindowedRect );
@@ -274,14 +266,13 @@ namespace Engine::Platform::Win32
 
   LRESULT CALLBACK Win32Window::WindowProc( HWND hWnd, const UINT uMsg,
                                             const WPARAM wParam,
-                                            const LPARAM lParm )
+                                            const LPARAM lParam )
   {
     WindowData * pData = nullptr;
 
     if ( uMsg == WM_NCCREATE )
     {
-      const auto pCreateStruct = reinterpret_cast<CREATESTRUCTW *>( lParm );
-
+      const auto pCreateStruct = reinterpret_cast<CREATESTRUCTW *>( lParam );
       pData = static_cast<WindowData *>( pCreateStruct->lpCreateParams );
       SetWindowLongPtrW( hWnd, GWLP_USERDATA,
                          reinterpret_cast<LONG_PTR>( pData ) );
@@ -294,20 +285,20 @@ namespace Engine::Platform::Win32
 
     if ( !pData )
     {
-      return DefWindowProcW( hWnd, uMsg, wParam, lParm );
+      return DefWindowProcW( hWnd, uMsg, wParam, lParam );
     }
 
     const auto pWindow = reinterpret_cast<Win32Window *>(
       reinterpret_cast<char *>( pData ) - offsetof( Win32Window, m_Data ) );
-    return pWindow->HandleMessage( uMsg, wParam, lParm );
+    return pWindow->HandleMessage( hWnd, uMsg, wParam, lParam );
   }
 
-  LRESULT Win32Window::HandleMessage( const UINT uMsg, WPARAM wParam,
-                                      const LPARAM lParam )
+  LRESULT Win32Window::HandleMessage( HWND hWnd, UINT uMsg, WPARAM wParam,
+                                      LPARAM lParam )
   {
     if ( !m_Data.m_EventCallback )
     {
-      return DefWindowProcW( m_pHandle, uMsg, wParam, lParam );
+      return DefWindowProcW( hWnd, uMsg, wParam, lParam );
     }
 
     switch ( uMsg )
@@ -498,11 +489,11 @@ namespace Engine::Platform::Win32
 
       default:
       {
-        // Intentionally blank
+        // This case intentionally left blank
       }
     }
 
-    return DefWindowProcW( m_pHandle, uMsg, wParam, lParam );
+    return DefWindowProcW( hWnd, uMsg, wParam, lParam );
   }
 } // namespace Engine::Platform::Win32
 

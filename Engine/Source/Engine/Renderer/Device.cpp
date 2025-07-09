@@ -109,9 +109,7 @@ namespace Engine::Renderer
     }
     catch ( const vk::SystemError & E )
     {
-      throw std::runtime_error(
-        std::format( "Failed to create logical device: {}", E.what() ) );
-      // LOG_FATAL( "Failed to create logical device!\n\t{}", E.what() );
+      LOG_FATAL( "Failed to create logical device: {}", E.what() );
     }
 
     m_GraphicsQueue =

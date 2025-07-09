@@ -3,7 +3,8 @@ set(ENGINE_SOURCES
         Source/Engine/Renderer/Device.cpp
         Source/Engine/Renderer/SwapChain.cpp
         Source/Engine/Renderer/Renderer.cpp
-)
+        Source/Engine/Core/ApplicationBase.cpp
+        Source/Engine/Utility/String.cpp)
 
 set(ENGINE_HEADERS
         Include/Engine/Core/Macro.hpp
@@ -16,6 +17,8 @@ set(ENGINE_HEADERS
         Include/Engine/Renderer/Device.hpp
         Include/Engine/Renderer/SwapChain.hpp
         Include/Engine/Renderer/Renderer.hpp
+        Include/Engine/Core/ApplicationBase.hpp
+        Include/Engine/Utility/String.hpp
 )
 
 if (WIN32)

@@ -1,13 +1,14 @@
 #pragma once
 
 #include <vector>
+#include <memory>
 
 #include <vulkan/vulkan.hpp>
 
 #include "Engine/Core/Macro.hpp"
 #include "Engine/Core/Types.hpp"
 
-namespace Engine::Platform
+namespace Engine
 {
   namespace Platform
   {
@@ -19,7 +20,7 @@ namespace Engine::Platform
     class Device;
     class SwapChain;
   } // namespace Renderer
-} // namespace Engine::Platform
+} // namespace Engine
 
 namespace Engine::Renderer
 {
@@ -56,10 +57,9 @@ namespace Engine::Renderer
                    const vk::DebugUtilsMessengerCallbackDataEXT * pCallbackData,
                    void *                                         pUserData );
 
-    Platform::IWindow &        m_Window;
-    vk::Instance               m_Instance;
-    vk::DebugUtilsMessengerEXT m_DebugMessenger;
-    vk::SurfaceKHR             m_Surface;
+    Platform::IWindow & m_Window;
+    vk::Instance        m_Instance;
+    vk::SurfaceKHR      m_Surface;
 
     std::unique_ptr<Device>    m_Device;
     std::unique_ptr<SwapChain> m_SwapChain;
@@ -77,6 +77,10 @@ namespace Engine::Renderer
     bool m_IsFramebufferResized;
 
     vk::ClearColorValue m_ClearColor;
+
+    vk::detail::DynamicLoader         m_Loader;
+    vk::detail::DispatchLoaderDynamic m_Dispatch;
+    vk::DebugUtilsMessengerEXT        m_DebugMessenger;
 
     static constexpr u32                   s_MaxFramesInFlight        = 2;
     static constexpr bool                  s_IsValidationLayerEnabled = true;

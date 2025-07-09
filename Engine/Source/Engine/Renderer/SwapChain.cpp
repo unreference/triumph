@@ -1,4 +1,5 @@
 #include "Engine/Renderer/Device.hpp"
+#include "Engine/Utility/Logger.hpp"
 
 #include "Engine/Renderer/SwapChain.hpp"
 
@@ -28,6 +29,7 @@ namespace Engine::Renderer
 
     Create();
     CreateImageViews();
+    CreateRenderPass();
     CreateFramebuffers();
   }
 
@@ -116,7 +118,9 @@ namespace Engine::Renderer
     swapChain.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
     swapChain.presentMode    = PresentMode;
     swapChain.clipped        = vk::True;
-    swapChain.oldSwapchain   = nullptr;
+
+    vk::SwapchainKHR old   = m_SwapChain;
+    swapChain.oldSwapchain = m_SwapChain;
 
     try
     {
@@ -124,8 +128,7 @@ namespace Engine::Renderer
     }
     catch ( const vk::SystemError & E )
     {
-      throw std::runtime_error(
-        std::format( "Failed to create swap chain: {}", E.what() ) );
+      LOG_FATAL( "Failed to create swap chain: {}", E.what() );
     }
 
     m_Images      = m_Device.Get().getSwapchainImagesKHR( m_SwapChain );
@@ -158,8 +161,7 @@ namespace Engine::Renderer
       }
       catch ( const vk::SystemError & E )
       {
-        throw std::runtime_error(
-          std::format( "Failed to create image views: {}", E.what() ) );
+        LOG_FATAL( "Failed to create image views: {}", E.what() );
       }
     }
   }
@@ -207,8 +209,7 @@ namespace Engine::Renderer
     }
     catch ( const vk::SystemError & E )
     {
-      throw std::runtime_error(
-        std::format( "Failed to create render pass: {}", E.what() ) );
+      LOG_FATAL( "Failed to create render pass: {}", E.what() );
     }
   }
 
@@ -235,8 +236,8 @@ namespace Engine::Renderer
       }
       catch ( const vk::SystemError & E )
       {
-        throw std::runtime_error(
-          std::format( "Failed to create framebuffer: {}", E.what() ) );
+
+        LOG_FATAL( "Failed to create framebuffer: {}", E.what() );
       }
     }
   }
@@ -263,6 +264,12 @@ namespace Engine::Renderer
     {
       m_Device.Get().destroyRenderPass( m_RenderPass );
       m_RenderPass = nullptr;
+    }
+
+    if ( m_SwapChain )
+    {
+      m_Device.Get().destroySwapchainKHR( m_SwapChain );
+      m_SwapChain = nullptr;
     }
 
     m_Framebuffers.clear();

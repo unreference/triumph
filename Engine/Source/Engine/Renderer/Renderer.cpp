@@ -14,6 +14,12 @@ namespace Engine::Renderer
 
   Renderer::Renderer( Platform::IWindow & window )
     : m_Window( window )
+    , m_Device( nullptr )
+    , m_SwapChain( nullptr )
+    , m_CurrentFrame( 0 )
+    , m_ImageIndex( 0 )
+    , m_IsFrameStarted( false )
+    , m_IsFramebufferResized( false )
   {
     CreateInstance();
     SetupDebugMessenger();
@@ -55,6 +61,11 @@ namespace Engine::Renderer
       {
         m_Device->Get().destroySemaphore( m_ImageSemaphores.at( i ) );
       }
+
+      if ( m_FencesInFlight.at( i ) )
+      {
+        m_Device->Get().destroyFence( m_FencesInFlight.at( i ) );
+      }
     }
 
     if ( m_CommandPool )
@@ -70,9 +81,10 @@ namespace Engine::Renderer
       m_Instance.destroySurfaceKHR( m_Surface );
     }
 
-    if ( s_IsValidationLayerEnabled && m_DebugMessenger )
+    if ( m_DebugMessenger )
     {
-      m_Instance.destroyDebugUtilsMessengerEXT( m_DebugMessenger );
+      m_Instance.destroyDebugUtilsMessengerEXT( m_DebugMessenger, nullptr,
+                                                m_Dispatch );
     }
 
     if ( m_Instance )
@@ -112,8 +124,7 @@ namespace Engine::Renderer
     if ( acquired.result != vk::Result::eSuccess &&
          acquired.result != vk::Result::eSuboptimalKHR )
     {
-      LOG_ERROR( "Failed to acquire swap chain image!" );
-      return;
+      LOG_FATAL( "Failed to acquire swap chain image!" );
     }
 
     m_ImageIndex = acquired.value;
@@ -121,8 +132,8 @@ namespace Engine::Renderer
     m_Device->Get().resetFences( 1, &m_FencesInFlight.at( m_CurrentFrame ) );
     m_CommandBuffers.at( m_CurrentFrame ).reset();
 
-    vk::CommandBufferBeginInfo commandBuffer = {};
-    m_CommandBuffers.at( m_CurrentFrame ).begin( commandBuffer );
+    constexpr vk::CommandBufferBeginInfo CommandBuffer = {};
+    m_CommandBuffers.at( m_CurrentFrame ).begin( CommandBuffer );
 
     vk::RenderPassBeginInfo renderPass = {};
     renderPass.renderPass              = m_SwapChain->GetRenderPass();
@@ -174,10 +185,10 @@ namespace Engine::Renderer
     present.waitSemaphoreCount = 1;
     present.pWaitSemaphores    = signals;
 
-    vk::SwapchainKHR swapchains[] = { m_SwapChain->Get() };
-    present.swapchainCount        = 1;
-    present.pSwapchains           = swapchains;
-    present.pImageIndices         = &m_ImageIndex;
+    const vk::SwapchainKHR SwapChains[] = { m_SwapChain->Get() };
+    present.swapchainCount              = 1;
+    present.pSwapchains                 = SwapChains;
+    present.pImageIndices               = &m_ImageIndex;
 
     auto result = m_Device->GetPresentQueue().presentKHR( present );
     if ( result == vk::Result::eErrorOutOfDateKHR ||
@@ -208,7 +219,7 @@ namespace Engine::Renderer
 
   void Renderer::CreateInstance()
   {
-    if ( s_IsValidationLayerEnabled && !IsValidationLayerSupported() )
+    if ( !IsValidationLayerSupported() )
     {
       LOG_ERROR( "No validation layers available!" );
       return;
@@ -259,8 +270,7 @@ namespace Engine::Renderer
     }
     catch ( const vk::SystemError & E )
     {
-      throw std::runtime_error(
-        std::format( "Failed to create instance: {}", E.what() ) );
+      LOG_FATAL( "Failed to create instance: {}", E.what() );
     }
   }
 
@@ -268,6 +278,12 @@ namespace Engine::Renderer
   {
     if constexpr ( s_IsValidationLayerEnabled )
     {
+      auto vkGetInstanceProcAddr =
+        m_Loader.getProcAddress<PFN_vkGetInstanceProcAddr>(
+          "vkGetInstanceProcAddr" );
+      m_Dispatch =
+        vk::detail::DispatchLoaderDynamic { m_Instance, vkGetInstanceProcAddr };
+
       vk::DebugUtilsMessengerCreateInfoEXT messenger = {};
       messenger.messageSeverity =
         vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
@@ -281,12 +297,12 @@ namespace Engine::Renderer
 
       try
       {
-        m_DebugMessenger = m_Instance.createDebugUtilsMessengerEXT( messenger );
+        m_DebugMessenger = m_Instance.createDebugUtilsMessengerEXT(
+          messenger, nullptr, m_Dispatch );
       }
       catch ( const vk::SystemError & E )
       {
-        throw std::runtime_error(
-          std::format( "Failed to set up debug messenger: {}", E.what() ) );
+        LOG_FATAL( "Failed to set up debug messenger: {}", E.what() );
       }
     }
   }
@@ -318,8 +334,7 @@ namespace Engine::Renderer
     }
     catch ( const vk::SystemError & E )
     {
-      throw std::runtime_error(
-        std::format( "Failed to create command pool: {}", E.what() ) );
+      LOG_FATAL( "Failed to create command pool: {}", E.what() );
     }
   }
 
@@ -340,8 +355,7 @@ namespace Engine::Renderer
     }
     catch ( const vk::SystemError & E )
     {
-      throw std::runtime_error(
-        std::format( "Failed to allocate command buffers: {}", E.what() ) );
+      LOG_FATAL( "Failed to allocate command buffers: {}", E.what() );
     }
   }
 
@@ -351,24 +365,28 @@ namespace Engine::Renderer
     m_RenderSemaphores.resize( s_MaxFramesInFlight );
     m_FencesInFlight.resize( s_MaxFramesInFlight );
 
+    if ( s_MaxFramesInFlight == 0 )
+    {
+      LOG_FATAL( "s_MaxFramesInFlight cannot be zero!" );
+    }
+
     vk::FenceCreateInfo fence = {};
     fence.flags               = vk::FenceCreateFlagBits::eSignaled;
 
-    vk::SemaphoreCreateInfo sempahore = {};
-    for ( size_t i = 0; i < s_MaxFramesInFlight; i++ )
+    constexpr vk::SemaphoreCreateInfo Semaphore = {};
+    for ( std::size_t i = 0; i < s_MaxFramesInFlight; i++ )
     {
       try
       {
         m_ImageSemaphores.at( i ) =
-          m_Device->Get().createSemaphore( sempahore );
+          m_Device->Get().createSemaphore( Semaphore );
         m_RenderSemaphores.at( i ) =
-          m_Device->Get().createSemaphore( sempahore );
+          m_Device->Get().createSemaphore( Semaphore );
         m_FencesInFlight.at( i ) = m_Device->Get().createFence( fence );
       }
       catch ( const vk::SystemError & E )
       {
-        throw std::runtime_error( std::format(
-          "Failed to create synchronization objects: {}", E.what() ) );
+        LOG_FATAL( "Failed to create synchronization objects: {}", E.what() );
       }
     }
   }

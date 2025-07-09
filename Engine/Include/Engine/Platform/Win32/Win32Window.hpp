@@ -63,7 +63,7 @@ namespace Engine::Platform::Win32
 
     static LRESULT CALLBACK WindowProc( HWND hWnd, UINT uMsg, WPARAM wParam,
                                         LPARAM lParm );
-    LRESULT HandleMessage( UINT uMsg, WPARAM wParam, LPARAM lParam );
+    LRESULT HandleMessage( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam );
 
     HWND       m_pHandle;
     HINSTANCE  m_pInstance;

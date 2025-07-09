@@ -49,9 +49,8 @@ namespace Engine::Utility
 
       case LogSeverity::m_Error:
       {
-        pLevelStr             = "ERROR";
-        pColorCode            = "\033[31m";
-        s_IsDebugBreakEnabled = true;
+        pLevelStr  = "ERROR";
+        pColorCode = "\033[31m";
         break;
       }
 
@@ -84,11 +83,6 @@ namespace Engine::Utility
     if ( s_IsDebugBreakEnabled )
     {
       __debugbreak();
-    }
-
-    if ( metadata.m_Severity == LogSeverity::m_Fatal )
-    {
-      std::exit( EXIT_FAILURE );
     }
   }
 } // namespace Engine::Utility
