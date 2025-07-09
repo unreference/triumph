@@ -4,7 +4,7 @@
 
 #include "Engine/Core/Types.hpp"
 
-namespace Engine::Platform
+namespace Engine::Platform::Events
 {
   enum class EventType : u8
   {
@@ -197,4 +197,4 @@ namespace Engine::Platform
   {
     return std::visit( []( const auto & e ) { return e.Type; }, event );
   }
-} // namespace Engine::Platform
+} // namespace Engine::Platform::Events

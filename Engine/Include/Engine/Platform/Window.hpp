@@ -7,8 +7,7 @@
 
 #include "Engine/Core/Types.hpp"
 #include "Engine/Core/Result.hpp"
-
-#include "WindowEvents.hpp"
+#include "Events/WindowEvents.hpp"
 
 namespace Engine::Platform
 {
@@ -25,14 +24,15 @@ namespace Engine::Platform
     bool m_IsDecorated  = true;
   };
 
-  class IWindow
+  class Window
   {
   public:
-    using EventCallback = std::function<void( const WindowEvent & )>;
+    using EventCallback = std::function<void( const Events::WindowEvent & )>;
 
-    virtual ~IWindow() = default;
+    Window();
+    virtual ~Window() = default;
 
-    static std::unique_ptr<IWindow> Create( const WindowProps & props );
+    static std::unique_ptr<Window> Create( const WindowProps & props );
 
     [[nodiscard]] virtual Result<vk::SurfaceKHR>
     CreateSurface( vk::Instance instance ) const = 0;
@@ -51,10 +51,27 @@ namespace Engine::Platform
     [[nodiscard]] virtual bool        IsFullScreen() const          = 0;
     [[nodiscard]] virtual void *      GetNativeHandle() const       = 0;
 
-    virtual void SetTitle( const std::string & title )      = 0;
-    virtual void SetSize( u32 width, u32 height )           = 0;
-    virtual void SetVsync( bool isEnabled )                 = 0;
-    virtual void SetFullScreen( bool isEnabled )            = 0;
-    virtual void SetEventCallback( EventCallback callback ) = 0;
+    virtual void SetTitle( const std::string & title ) = 0;
+    virtual void SetSize( u32 width, u32 height )      = 0;
+    virtual void SetVsync( bool isEnabled )            = 0;
+    virtual void SetFullScreen( bool isEnabled )       = 0;
+
+    virtual u64  AddEventListener( EventCallback callback ) = 0;
+    virtual bool RemoveEventListener( u64 id )              = 0;
+    virtual void ClearEventListeners()                      = 0;
+
+  protected:
+    void DispatchEvent( const Events::WindowEvent & event );
+
+  private:
+    struct EventListener
+    {
+      u64           id = 0;
+      EventCallback callback;
+    };
+
+    std::vector<EventListener> m_EventListeners;
+    u64                        m_NextListenerId;
   };
+
 } // namespace Engine::Platform

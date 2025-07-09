@@ -2,7 +2,7 @@
 
 #include "Engine/Renderer/Device.hpp"
 #include "Engine/Renderer/SwapChain.hpp"
-#include "Engine/Platform/IWindow.hpp"
+#include "Engine/Platform/Window.hpp"
 #include "Engine/Utility/Logger.hpp"
 
 #include "Engine/Renderer/Renderer.hpp"
@@ -12,7 +12,7 @@ namespace Engine::Renderer
   const std::vector<const char *> Renderer::s_ValidationLayers = {
     "VK_LAYER_KHRONOS_validation" };
 
-  Renderer::Renderer( Platform::IWindow & window )
+  Renderer::Renderer( Platform::Window & window )
     : m_Window( window )
     , m_Device( nullptr )
     , m_SwapChain( nullptr )
@@ -32,15 +32,6 @@ namespace Engine::Renderer
     CreateCommandPool();
     CreateCommandBuffers();
     CreateSyncObjects();
-
-    m_Window.SetEventCallback(
-      [ this ]( const Platform::WindowEvent & event )
-      {
-        if ( std::holds_alternative<Platform::WindowResizeEvent>( event ) )
-        {
-          m_IsFramebufferResized = true;
-        }
-      } );
   }
 
   Renderer::~Renderer()
@@ -210,6 +201,12 @@ namespace Engine::Renderer
   void Renderer::Clear( f32 r, f32 g, f32 b, f32 a /*= 1.0f */ )
   {
     m_ClearColor = { r, g, b, a };
+  }
+
+  void Renderer::Resize( u32 width, u32 height )
+  {
+    LOG_INFO( "Window resized to {}x{}", width, height );
+    m_IsFramebufferResized = true;
   }
 
   bool Renderer::IsFrameInProgress() const

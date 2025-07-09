@@ -12,7 +12,7 @@ namespace Engine
 {
   namespace Platform
   {
-    class IWindow;
+    class Window;
   }
 
   namespace Renderer
@@ -30,12 +30,14 @@ namespace Engine::Renderer
     DISALLOW_MOVE( Renderer );
 
   public:
-    explicit Renderer( Platform::IWindow & window );
+    explicit Renderer( Platform::Window & window );
     ~Renderer();
 
     void BeginDraw();
     void EndDraw();
+
     void Clear( f32 r, f32 g, f32 b, f32 a = 1.0f );
+    void Resize( u32 width, u32 height );
 
     [[nodiscard]] bool IsFrameInProgress() const;
 
@@ -57,9 +59,9 @@ namespace Engine::Renderer
                    const vk::DebugUtilsMessengerCallbackDataEXT * pCallbackData,
                    void *                                         pUserData );
 
-    Platform::IWindow & m_Window;
-    vk::Instance        m_Instance;
-    vk::SurfaceKHR      m_Surface;
+    Platform::Window & m_Window;
+    vk::Instance       m_Instance;
+    vk::SurfaceKHR     m_Surface;
 
     std::unique_ptr<Device>    m_Device;
     std::unique_ptr<SwapChain> m_SwapChain;

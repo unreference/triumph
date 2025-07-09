@@ -49,7 +49,7 @@ namespace Engine::Core
     m_IsRunning = false;
   }
 
-  Platform::IWindow & ApplicationBase::GetWindow() const
+  Platform::Window & ApplicationBase::GetWindow() const
   {
     return *m_Window;
   }
@@ -65,12 +65,9 @@ namespace Engine::Core
     {
       const Platform::WindowProps Props = {};
 
-      m_Window = Platform::IWindow::Create( Props );
-      m_Window->SetEventCallback(
-        [ this ]( const Platform::WindowEvent & EVENT )
-        { HandleEvent( EVENT ); } );
-
+      m_Window   = Platform::Window::Create( Props );
       m_Renderer = std::make_unique<Renderer::Renderer>( *m_Window );
+      SetupEventListeners();
     }
     catch ( const std::exception & E )
     {
@@ -96,13 +93,22 @@ namespace Engine::Core
     LOG_INFO( "Successfully shutdown engine" );
   }
 
-  void ApplicationBase::HandleEvent( const Platform::WindowEvent & event )
+  void ApplicationBase::SetupEventListeners()
   {
-    if ( std::holds_alternative<Platform::WindowCloseEvent>( event ) )
-    {
-      Close();
-    }
+    using namespace Platform::Events;
+    m_EventListener =
+      EventListener( *m_Window,
+                     [ this ]( const WindowEvent & event )
+                     {
+                       if ( std::holds_alternative<WindowCloseEvent>( event ) )
+                       {
+                         Close();
+                       }
+                     } );
 
-    OnEvent( event );
+    m_ResizeListener = WindowResizeListener(
+      *m_Window, [ this ]( const WindowResizeEvent & event )
+      { m_Renderer->Resize( event.m_Width, event.m_Height ); } );
   }
+
 } // namespace Engine::Core

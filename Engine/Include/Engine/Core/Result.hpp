@@ -3,10 +3,15 @@
 #include <variant>
 #include <string>
 
+#include <Engine/Core/Macro.hpp>
+
 namespace Engine
 {
   template <typename T, typename E = std::string> class Result
   {
+    DISALLOW_COPY( Result );
+    DISALLOW_MOVE( Result );
+
   public:
     Result( T && value )
       : m_Data( std::forward<T>( value ) )

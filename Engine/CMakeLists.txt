@@ -4,14 +4,15 @@ set(ENGINE_SOURCES
         Source/Engine/Renderer/SwapChain.cpp
         Source/Engine/Renderer/Renderer.cpp
         Source/Engine/Core/ApplicationBase.cpp
-        Source/Engine/Utility/String.cpp)
+        Source/Engine/Utility/String.cpp
+        Source/Engine/Platform/Window.cpp
+        Source/Engine/Platform/Events/EventListener.cpp)
 
 set(ENGINE_HEADERS
         Include/Engine/Core/Macro.hpp
         Include/Engine/Core/Result.hpp
         Include/Engine/Core/Types.hpp
-        Include/Engine/Platform/IWindow.hpp
-        Include/Engine/Platform/WindowEvents.hpp
+        Include/Engine/Platform/Window.hpp
         Include/Engine/Platform/WindowFactory.hpp
         Include/Engine/Utility/Logger.hpp
         Include/Engine/Renderer/Device.hpp
@@ -19,6 +20,9 @@ set(ENGINE_HEADERS
         Include/Engine/Renderer/Renderer.hpp
         Include/Engine/Core/ApplicationBase.hpp
         Include/Engine/Utility/String.hpp
+        Include/Engine/Platform/Events/EventListener.hpp
+        Include/Engine/Platform/Events/TypedEventListener.hpp
+        Include/Engine/Platform/Events/WindowEvents.hpp
 )
 
 if (WIN32)

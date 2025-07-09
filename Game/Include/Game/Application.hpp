@@ -1,17 +1,13 @@
 #pragma once
 
 #include <Engine/Core/ApplicationBase.hpp>
-#include <Engine/Core/Macro.hpp>
 
 namespace Game
 {
-  class Application final : public Engine::Core::ApplicationBase
+  class Application : public Engine::Core::ApplicationBase
   {
-    DISALLOW_COPY( Application );
-    DISALLOW_MOVE( Application );
-
   public:
-    Application();
+    Application()           = default;
     ~Application() override = default;
 
   protected:
@@ -19,9 +15,15 @@ namespace Game
     void Update( f32 deltaTime ) override;
     void Draw() override;
     void Shutdown() override;
-    void OnEvent( const Engine::Platform::WindowEvent & event ) override;
 
   private:
+    void SetupGameEventListeners();
+
+    Engine::Platform::Events::KeyPressedListener m_EscapeKeyPressedListener;
+    Engine::Platform::Events::KeyPressedListener m_KeyPressedListener;
+    Engine::Platform::Events::MouseButtonPressedListener
+      m_MouseButtonPressedListener;
+
     f32 m_TotalTime;
   };
 } // namespace Game

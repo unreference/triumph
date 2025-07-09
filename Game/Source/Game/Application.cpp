@@ -7,14 +7,10 @@
 
 namespace Game
 {
-  Application::Application()
-    : m_TotalTime( 0.0f )
-  {
-  }
-
   void Application::Init()
   {
     GetRenderer().Clear( 0.5f, 0.5f, 0.5f );
+    SetupGameEventListeners();
   }
 
   void Application::Update( const f32 deltaTime )
@@ -37,25 +33,36 @@ namespace Game
     LOG_INFO( "Game shutdown" );
   }
 
-  void Application::OnEvent( const Engine::Platform::WindowEvent & event )
+  void Application::SetupGameEventListeners()
   {
-    using namespace Engine::Platform;
+    using namespace Engine::Platform::Events;
 
-    if ( std::holds_alternative<KeyPressedEvent>( event ) )
-    {
-      const auto & [ m_Key, m_RepeatCount ] =
-        std::get<KeyPressedEvent>( event );
-
-      if ( m_Key == KeyCode::m_Escape )
+    m_EscapeKeyPressedListener = KeyPressedListener(
+      GetWindow(),
+      [ this ]( const KeyPressedEvent & event )
       {
-        Close();
-      }
-    }
+        if ( event.m_Key == KeyCode::m_Escape )
+        {
+          LOG_INFO( "Escape pressed.  Closing application" );
+          Close();
+        }
+      } );
 
-    if ( std::holds_alternative<WindowResizeEvent>( event ) )
-    {
-      const auto & [ m_Width, m_Height ] = std::get<WindowResizeEvent>( event );
-      LOG_INFO( "Window resized to {}x{}", m_Width, m_Height );
-    }
+    m_KeyPressedListener = KeyPressedListener(
+      GetWindow(),
+      [ this ]( const KeyPressedEvent & event )
+      {
+        LOG_INFO( "Key pressed: {} (repeated: {}",
+                  static_cast<i32>( event.m_Key ), event.m_RepeatCount );
+      } );
+
+    m_MouseButtonPressedListener = MouseButtonPressedListener(
+      GetWindow(),
+      [ this ]( const MouseButtonPressedEvent & event )
+      {
+        LOG_INFO( "Mouse button pressed: {}",
+                  static_cast<i32>( event.m_Button ) );
+      } );
   }
+
 } // namespace Game

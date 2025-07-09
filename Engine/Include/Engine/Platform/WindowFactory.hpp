@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "IWindow.hpp"
+#include "Window.hpp"
 
 #if defined( PLATFORM_WIN32 )
 #include "Win32/Win32Window.hpp"
@@ -12,7 +12,7 @@
 
 namespace Engine::Platform
 {
-  inline std::unique_ptr<IWindow> IWindow::Create( const WindowProps & props )
+  inline std::unique_ptr<Window> Window::Create( const WindowProps & props )
   {
 #if defined( PLATFORM_WIN32 )
     return std::make_unique<Win32::Win32Window>( props );

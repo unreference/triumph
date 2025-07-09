@@ -171,11 +171,6 @@ namespace Engine::Platform::Win32
     }
   }
 
-  void Win32Window::SetEventCallback( EventCallback callback )
-  {
-    m_Data.m_EventCallback = std::move( callback );
-  }
-
   void Win32Window::Init( const WindowProps & props )
   {
     m_Data.m_Title        = props.m_Title;
@@ -296,17 +291,14 @@ namespace Engine::Platform::Win32
   LRESULT Win32Window::HandleMessage( HWND hWnd, UINT uMsg, WPARAM wParam,
                                       LPARAM lParam )
   {
-    if ( !m_Data.m_EventCallback )
-    {
-      return DefWindowProcW( hWnd, uMsg, wParam, lParam );
-    }
+    using namespace Engine::Platform::Events;
 
     switch ( uMsg )
     {
       case WM_CLOSE:
       {
         WindowCloseEvent event = {};
-        m_Data.m_EventCallback( event );
+        DispatchEvent( event );
         return 0;
       }
 
@@ -322,21 +314,21 @@ namespace Engine::Platform::Win32
         event.m_Width           = NewHeight;
         event.m_Height          = NewHeight;
 
-        m_Data.m_EventCallback( event );
+        DispatchEvent( event );
         return 0;
       }
 
       case WM_SETFOCUS:
       {
         WindowSetFocusEvent event = {};
-        m_Data.m_EventCallback( event );
+        DispatchEvent( event );
         return 0;
       }
 
       case WM_KILLFOCUS:
       {
         WindowKillFocusEvent event = {};
-        m_Data.m_EventCallback( event );
+        DispatchEvent( event );
         return 0;
       }
 
@@ -349,7 +341,7 @@ namespace Engine::Platform::Win32
         event.m_X              = X;
         event.m_Y              = Y;
 
-        m_Data.m_EventCallback( event );
+        DispatchEvent( event );
         return 0;
       }
 
@@ -366,7 +358,7 @@ namespace Engine::Platform::Win32
         event.m_Key           = Key;
         event.m_RepeatCount   = RepeatCount;
 
-        m_Data.m_EventCallback( event );
+        DispatchEvent( event );
         return 0;
       }
 
@@ -379,7 +371,7 @@ namespace Engine::Platform::Win32
         KeyReleasedEvent event = {};
         event.m_Key            = Key;
 
-        m_Data.m_EventCallback( event );
+        DispatchEvent( event );
         return 0;
       }
 
@@ -390,7 +382,7 @@ namespace Engine::Platform::Win32
         KeyTypedEvent event = {};
         event.m_Character   = Character;
 
-        m_Data.m_EventCallback( event );
+        DispatchEvent( event );
         return 0;
       }
 
@@ -399,7 +391,7 @@ namespace Engine::Platform::Win32
         MouseButtonPressedEvent event = {};
         event.m_Button                = MouseButton::m_Left;
 
-        m_Data.m_EventCallback( event );
+        DispatchEvent( event );
         return 0;
       }
 
@@ -408,7 +400,7 @@ namespace Engine::Platform::Win32
         MouseButtonReleasedEvent event = {};
         event.m_Button                 = MouseButton::m_Left;
 
-        m_Data.m_EventCallback( event );
+        DispatchEvent( event );
         return 0;
       }
 
@@ -417,7 +409,7 @@ namespace Engine::Platform::Win32
         MouseButtonPressedEvent event = {};
         event.m_Button                = MouseButton::m_Right;
 
-        m_Data.m_EventCallback( event );
+        DispatchEvent( event );
         return 0;
       }
 
@@ -426,7 +418,7 @@ namespace Engine::Platform::Win32
         MouseButtonReleasedEvent event = {};
         event.m_Button                 = MouseButton::m_Right;
 
-        m_Data.m_EventCallback( event );
+        DispatchEvent( event );
         return 0;
       }
 
@@ -435,7 +427,7 @@ namespace Engine::Platform::Win32
         MouseButtonPressedEvent event = {};
         event.m_Button                = MouseButton::m_Middle;
 
-        m_Data.m_EventCallback( event );
+        DispatchEvent( event );
         return 0;
       }
 
@@ -444,7 +436,7 @@ namespace Engine::Platform::Win32
         MouseButtonReleasedEvent event = {};
         event.m_Button                 = MouseButton::m_Middle;
 
-        m_Data.m_EventCallback( event );
+        DispatchEvent( event );
         return 0;
       }
 
@@ -457,7 +449,7 @@ namespace Engine::Platform::Win32
         event.m_X             = X;
         event.m_Y             = Y;
 
-        m_Data.m_EventCallback( event );
+        DispatchEvent( event );
         return 0;
       }
 
@@ -470,7 +462,7 @@ namespace Engine::Platform::Win32
         event.m_XOffset          = 0.0f;
         event.m_YOffset          = Delta;
 
-        m_Data.m_EventCallback( event );
+        DispatchEvent( event );
         return 0;
       }
 
@@ -483,7 +475,7 @@ namespace Engine::Platform::Win32
         event.m_XOffset          = Delta;
         event.m_YOffset          = 0.0f;
 
-        m_Data.m_EventCallback( event );
+        DispatchEvent( event );
         return 0;
       }
 
@@ -495,6 +487,22 @@ namespace Engine::Platform::Win32
 
     return DefWindowProcW( hWnd, uMsg, wParam, lParam );
   }
+
+  u64 Win32Window::AddEventListener( EventCallback callback )
+  {
+    return Window::AddEventListener( std::move( callback ) );
+  }
+
+  bool Win32Window::RemoveEventListener( u64 id )
+  {
+    return Window::RemoveEventListener( id );
+  }
+
+  void Win32Window::ClearEventListeners()
+  {
+    return Window::ClearEventListeners();
+  }
+
 } // namespace Engine::Platform::Win32
 
 #endif

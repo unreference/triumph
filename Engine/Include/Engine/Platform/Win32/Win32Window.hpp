@@ -4,12 +4,12 @@
 
 #include <Windows.h>
 
-#include "Engine/Platform/IWindow.hpp"
+#include "Engine/Platform/Window.hpp"
 #include "Engine/Core/Macro.hpp"
 
 namespace Engine::Platform::Win32
 {
-  class Win32Window final : public IWindow
+  class Win32Window final : public Window
   {
     DISALLOW_COPY( Win32Window );
     DISALLOW_MOVE( Win32Window );
@@ -40,7 +40,10 @@ namespace Engine::Platform::Win32
     void SetSize( u32 width, u32 height ) override;
     void SetVsync( bool isEnabled ) override;
     void SetFullScreen( bool isEnabled ) override;
-    void SetEventCallback( EventCallback callback ) override;
+
+    u64  AddEventListener( EventCallback callback ) override;
+    bool RemoveEventListener( u64 id ) override;
+    void ClearEventListeners() override;
 
   private:
     struct WindowData
@@ -52,8 +55,6 @@ namespace Engine::Platform::Win32
       bool m_IsVsynced;
       bool m_IsFullScreen;
       bool m_ShouldClose;
-
-      EventCallback m_EventCallback;
 
       RECT  m_WindowedRect;
       DWORD m_WindowedStyle;
