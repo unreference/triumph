@@ -14,6 +14,7 @@ namespace Game
     , m_TotalTime( 0 )
   {
   }
+
   void Application::Init()
   {
     GetRenderer().Clear( 0.5f, 0.5f, 0.5f );
@@ -71,5 +72,4 @@ namespace Game
                   static_cast<i32>( event.m_Button ) );
       } );
   }
-
 } // namespace Game

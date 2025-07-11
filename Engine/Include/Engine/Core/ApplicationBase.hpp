@@ -2,8 +2,6 @@
 
 #include <memory>
 
-#include "Macro.hpp"
-#include "Types.hpp"
 #include "Engine/Platform/Events/EventListener.hpp"
 #include "Engine/Platform/Events/TypedEventListener.hpp"
 
@@ -38,12 +36,12 @@ namespace Engine::Core
   private:
     void InternalInit();
     void InternalShutdown();
-    void SetupEventListeners();
+    void SetupEngineEventListeners();
 
     std::unique_ptr<Platform::Window>   m_Window;
     std::unique_ptr<Renderer::Renderer> m_Renderer;
 
-    Platform::Events::EventListener        m_EventListener;
+    Platform::Events::WindowCloseListener  m_CloseListener;
     Platform::Events::WindowResizeListener m_ResizeListener;
 
     bool m_IsRunning;

@@ -2,7 +2,7 @@
 
 #include <optional>
 
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan_raii.hpp>
 
 #include "Engine/Core/Macro.hpp"
 #include "Engine/Core/Types.hpp"
@@ -26,32 +26,35 @@ namespace Engine::Renderer
       }
     };
 
-    explicit Device( vk::Instance instance, vk::SurfaceKHR surface );
+    explicit Device( const vk::raii::Instance &   instance,
+                     const vk::raii::SurfaceKHR & surface );
     ~Device() = default;
 
-    [[nodiscard]] vk::Device                 Get() const;
-    [[nodiscard]] vk::PhysicalDevice         GetPhysicalDevice() const;
-    [[nodiscard]] vk::Queue                  GetGraphicsQueue() const;
-    [[nodiscard]] vk::Queue                  GetPresentQueue() const;
+    [[nodiscard]] const vk::raii::Device &         Get() const;
+    [[nodiscard]] const vk::raii::PhysicalDevice & GetPhysicalDevice() const;
+    [[nodiscard]] const vk::raii::Queue &          GetGraphicsQueue() const;
+    [[nodiscard]] const vk::raii::Queue &          GetPresentQueue() const;
     [[nodiscard]] const QueueFamilyIndices & GetQueueFamilyIndices() const;
 
     void Wait() const;
 
   private:
-    static QueueFamilyIndices GetQueueFamilies( vk::PhysicalDevice device,
-                                                vk::SurfaceKHR     surface );
-    static bool               IsExtensionSupported( vk::PhysicalDevice device );
-    static bool               IsDeviceSuitable( vk::PhysicalDevice device,
-                                                vk::SurfaceKHR     surface );
+    static QueueFamilyIndices
+                GetQueueFamilies( const vk::raii::PhysicalDevice & device,
+                                  const vk::raii::SurfaceKHR &     surface );
+    static bool IsExtensionSupported( const vk::raii::PhysicalDevice & device );
+    static bool IsDeviceSuitable( const vk::raii::PhysicalDevice & device,
+                                  const vk::raii::SurfaceKHR &     surface );
 
-    void PickPhysicalDevice( vk::Instance instance, vk::SurfaceKHR surface );
-    void CreateLogicalDevice( vk::SurfaceKHR surface );
+    void PickPhysicalDevice( const vk::raii::Instance &   instance,
+                             const vk::raii::SurfaceKHR & surface );
+    void CreateLogicalDevice( const vk::raii::SurfaceKHR & surface );
 
-    vk::Device         m_Device;
-    vk::PhysicalDevice m_PhysicalDevice;
-    vk::Queue          m_GraphicsQueue;
-    vk::Queue          m_PresentQueue;
-    QueueFamilyIndices m_QueueFamilyIndices;
+    vk::raii::PhysicalDevice m_PhysicalDevice;
+    vk::raii::Device         m_Device;
+    vk::raii::Queue          m_GraphicsQueue;
+    vk::raii::Queue          m_PresentQueue;
+    QueueFamilyIndices       m_QueueFamilyIndices;
 
     static const std::vector<const char *> s_Extensions;
   };

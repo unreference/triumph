@@ -9,7 +9,7 @@
 namespace Engine::Core
 {
   ApplicationBase::ApplicationBase()
-    : m_EventListener()
+    : m_CloseListener()
     , m_ResizeListener()
     , m_IsRunning( false )
     , m_LastFrameTime( 0 )
@@ -71,7 +71,7 @@ namespace Engine::Core
 
       m_Window   = Platform::Window::Create( Props );
       m_Renderer = std::make_unique<Renderer::Renderer>( *m_Window );
-      SetupEventListeners();
+      SetupEngineEventListeners();
     }
     catch ( const std::exception & E )
     {
@@ -83,6 +83,16 @@ namespace Engine::Core
 
   void ApplicationBase::InternalShutdown()
   {
+    if ( m_CloseListener.IsValid() )
+    {
+      m_CloseListener.Remove();
+    }
+
+    if ( m_ResizeListener.IsValid() )
+    {
+      m_ResizeListener.Remove();
+    }
+
     if ( m_Renderer )
     {
       m_Renderer.reset();
@@ -94,22 +104,14 @@ namespace Engine::Core
     }
   }
 
-  void ApplicationBase::SetupEventListeners()
+  void ApplicationBase::SetupEngineEventListeners()
   {
     using namespace Platform::Events;
-    m_EventListener =
-      EventListener( *m_Window,
-                     [ this ]( const WindowEvent & event )
-                     {
-                       if ( std::holds_alternative<WindowCloseEvent>( event ) )
-                       {
-                         Close();
-                       }
-                     } );
+    m_CloseListener = WindowCloseListener(
+      *m_Window, [ this ]( const WindowCloseEvent & ) { Close(); } );
 
     m_ResizeListener = WindowResizeListener(
       *m_Window, [ this ]( const WindowResizeEvent & event )
       { m_Renderer->Resize( event.m_Width, event.m_Height ); } );
   }
-
 } // namespace Engine::Core

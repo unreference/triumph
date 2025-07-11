@@ -5,13 +5,16 @@
 
 namespace Engine::Renderer
 {
-  SwapChain::SwapChain( const Device & device, const vk::SurfaceKHR surface,
-                        const u32 width, const u32 height )
+  SwapChain::SwapChain( const Device &               device,
+                        const vk::raii::SurfaceKHR & surface, const u32 width,
+                        const u32 height )
     : m_Device( device )
     , m_Surface( surface )
     , m_Width( width )
     , m_Height( height )
+    , m_SwapChain( nullptr )
     , m_ImageFormat()
+    , m_RenderPass( nullptr )
   {
     Create();
     CreateImageViews();
@@ -26,7 +29,12 @@ namespace Engine::Renderer
 
     m_Device.Wait();
 
-    Cleanup();
+    m_Framebuffers.clear();
+    m_ImageViews.clear();
+    m_Images.clear();
+
+    m_RenderPass = nullptr;
+    m_SwapChain  = nullptr;
 
     Create();
     CreateImageViews();
@@ -34,7 +42,7 @@ namespace Engine::Renderer
     CreateFramebuffers();
   }
 
-  vk::SwapchainKHR SwapChain::Get() const
+  const vk::raii::SwapchainKHR & SwapChain::Get() const
   {
     return m_SwapChain;
   }
@@ -54,17 +62,17 @@ namespace Engine::Renderer
     return m_Images;
   }
 
-  const std::vector<vk::ImageView> & SwapChain::GetImageViews() const
+  const std::vector<vk::raii::ImageView> & SwapChain::GetImageViews() const
   {
     return m_ImageViews;
   }
 
-  const std::vector<vk::Framebuffer> & SwapChain::GetFramebuffers() const
+  const std::vector<vk::raii::Framebuffer> & SwapChain::GetFramebuffers() const
   {
     return m_Framebuffers;
   }
 
-  vk::RenderPass SwapChain::GetRenderPass() const
+  const vk::raii::RenderPass & SwapChain::GetRenderPass() const
   {
     return m_RenderPass;
   }
@@ -76,22 +84,22 @@ namespace Engine::Renderer
 
   void SwapChain::Create()
   {
-    auto [ m_Capabilities, m_Formats, m_PresentModes ] =
+    auto [ capabilities, formats, presentModes ] =
       QuerySwapChainSupport( m_Device.GetPhysicalDevice() );
 
-    const vk::SurfaceFormatKHR Surface   = ChooseSurfaceFormat( m_Formats );
-    const vk::PresentModeKHR PresentMode = ChoosePresentMode( m_PresentModes );
-    const vk::Extent2D       Extent      = ChooseExtent( m_Capabilities );
+    const vk::SurfaceFormatKHR Surface     = ChooseSurfaceFormat( formats );
+    const vk::PresentModeKHR   PresentMode = ChoosePresentMode( presentModes );
+    const vk::Extent2D         Extent      = ChooseExtent( capabilities );
 
-    u32 imageCount = m_Capabilities.minImageCount + 1;
-    if ( m_Capabilities.maxImageCount > 0 &&
-         imageCount > m_Capabilities.maxImageCount )
+    u32 imageCount = capabilities.minImageCount + 1;
+    if ( capabilities.maxImageCount > 0 &&
+         imageCount > capabilities.maxImageCount )
     {
-      imageCount = m_Capabilities.maxImageCount;
+      imageCount = capabilities.maxImageCount;
     }
 
     vk::SwapchainCreateInfoKHR swapChain = {};
-    swapChain.surface                    = m_Surface;
+    swapChain.surface                    = *m_Surface;
     swapChain.minImageCount              = imageCount;
     swapChain.imageFormat                = Surface.format;
     swapChain.imageColorSpace            = Surface.colorSpace;
@@ -99,29 +107,30 @@ namespace Engine::Renderer
     swapChain.imageArrayLayers           = 1;
     swapChain.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
 
-    const auto & [ m_GraphicsFamily, m_PresentFamily ] =
+    const auto & [ graphicsFamily, presentFamily ] =
       m_Device.GetQueueFamilyIndices();
-    const u32 FamilyIndices[] = { m_GraphicsFamily.value(),
-                                  m_PresentFamily.value() };
+    const u32 Indices[] = { graphicsFamily.value(), presentFamily.value() };
 
-    if ( m_GraphicsFamily != m_PresentFamily )
+    if ( graphicsFamily != presentFamily )
     {
       swapChain.imageSharingMode      = vk::SharingMode::eConcurrent;
       swapChain.queueFamilyIndexCount = 2;
-      swapChain.pQueueFamilyIndices   = FamilyIndices;
+      swapChain.pQueueFamilyIndices   = Indices;
     }
     else
     {
       swapChain.imageSharingMode = vk::SharingMode::eExclusive;
     }
 
-    swapChain.preTransform   = m_Capabilities.currentTransform;
+    swapChain.preTransform   = capabilities.currentTransform;
     swapChain.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
     swapChain.presentMode    = PresentMode;
     swapChain.clipped        = vk::True;
 
-    const vk::SwapchainKHR Old = m_SwapChain;
-    swapChain.oldSwapchain     = Old;
+    if ( *m_SwapChain )
+    {
+      swapChain.oldSwapchain = *m_SwapChain;
+    }
 
     try
     {
@@ -132,29 +141,26 @@ namespace Engine::Renderer
       LOG_FATAL( "Failed to create swap chain: {}", E.what() );
     }
 
-    if ( Old )
-    {
-      m_Device.Get().destroySwapchainKHR( Old );
-    }
-
-    m_Images      = m_Device.Get().getSwapchainImagesKHR( m_SwapChain );
+    m_Images      = m_SwapChain.getImages();
     m_ImageFormat = Surface.format;
     m_Extent      = Extent;
   }
 
   void SwapChain::CreateImageViews()
   {
-    m_ImageViews.resize( m_Images.size() );
+    m_ImageViews.clear();
+    m_ImageViews.reserve( m_Images.size() );
 
-    for ( std::size_t i = 0; i < m_Images.size(); ++i )
+    for ( const auto & Image : m_Images )
     {
       vk::ImageViewCreateInfo imageView       = {};
-      imageView.image                         = m_Images.at( i );
+      imageView.image                         = Image;
       imageView.viewType                      = vk::ImageViewType::e2D;
       imageView.format                        = m_ImageFormat;
       imageView.components.r                  = vk::ComponentSwizzle::eIdentity;
       imageView.components.g                  = vk::ComponentSwizzle::eIdentity;
       imageView.components.b                  = vk::ComponentSwizzle::eIdentity;
+      imageView.components.a                  = vk::ComponentSwizzle::eIdentity;
       imageView.subresourceRange.aspectMask   = vk::ImageAspectFlagBits::eColor;
       imageView.subresourceRange.baseMipLevel = 0;
       imageView.subresourceRange.levelCount   = 1;
@@ -163,7 +169,8 @@ namespace Engine::Renderer
 
       try
       {
-        m_ImageViews.at( i ) = m_Device.Get().createImageView( imageView );
+        m_ImageViews.emplace_back(
+          m_Device.Get().createImageView( imageView ) );
       }
       catch ( const vk::SystemError & E )
       {
@@ -221,14 +228,15 @@ namespace Engine::Renderer
 
   void SwapChain::CreateFramebuffers()
   {
-    m_Framebuffers.resize( m_ImageViews.size() );
+    m_Framebuffers.clear();
+    m_Framebuffers.reserve( m_ImageViews.size() );
 
-    for ( std::size_t i = 0; i < m_ImageViews.size(); ++i )
+    for ( const auto & ImageView : m_ImageViews )
     {
-      std::array attachments = { m_ImageViews.at( i ) };
+      std::array attachments = { *ImageView };
 
       vk::FramebufferCreateInfo framebuffer = {};
-      framebuffer.renderPass                = m_RenderPass;
+      framebuffer.renderPass                = *m_RenderPass;
       framebuffer.attachmentCount = static_cast<u32>( attachments.size() );
       framebuffer.pAttachments    = attachments.data();
       framebuffer.width           = m_Extent.width;
@@ -237,59 +245,23 @@ namespace Engine::Renderer
 
       try
       {
-        m_Framebuffers.at( i ) =
-          m_Device.Get().createFramebuffer( framebuffer );
+        m_Framebuffers.emplace_back(
+          m_Device.Get().createFramebuffer( framebuffer ) );
       }
       catch ( const vk::SystemError & E )
       {
-
         LOG_FATAL( "Failed to create framebuffer: {}", E.what() );
       }
     }
   }
 
-  void SwapChain::Cleanup()
-  {
-    for ( auto & framebuffer : m_Framebuffers )
-    {
-      if ( framebuffer )
-      {
-        m_Device.Get().destroyFramebuffer( framebuffer );
-      }
-    }
-
-    for ( auto & imageView : m_ImageViews )
-    {
-      if ( imageView )
-      {
-        m_Device.Get().destroyImageView( imageView );
-      }
-    }
-
-    if ( m_RenderPass )
-    {
-      m_Device.Get().destroyRenderPass( m_RenderPass );
-      m_RenderPass = nullptr;
-    }
-
-    if ( m_SwapChain )
-    {
-      m_Device.Get().destroySwapchainKHR( m_SwapChain );
-      m_SwapChain = nullptr;
-    }
-
-    m_Framebuffers.clear();
-    m_ImageViews.clear();
-    m_Images.clear();
-  }
-
-  SwapChain::SwapChainSupportDetails
-  SwapChain::QuerySwapChainSupport( const vk::PhysicalDevice device ) const
+  SwapChain::SwapChainSupportDetails SwapChain::QuerySwapChainSupport(
+    const vk::raii::PhysicalDevice & device ) const
   {
     SwapChainSupportDetails details = {};
-    details.m_Capabilities = device.getSurfaceCapabilitiesKHR( m_Surface );
-    details.m_Formats      = device.getSurfaceFormatsKHR( m_Surface );
-    details.m_PresentModes = device.getSurfacePresentModesKHR( m_Surface );
+    details.m_Capabilities = device.getSurfaceCapabilitiesKHR( *m_Surface );
+    details.m_Formats      = device.getSurfaceFormatsKHR( *m_Surface );
+    details.m_PresentModes = device.getSurfacePresentModesKHR( *m_Surface );
 
     return details;
   }
@@ -304,14 +276,14 @@ namespace Engine::Renderer
       { vk::Format::eR8G8B8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear },
     };
 
-    for ( const auto & want : Prefer )
+    for ( const auto & Want : Prefer )
     {
       const auto I =
         std::ranges::find_if( availableFormats,
                               [ & ]( const vk::SurfaceFormatKHR & Available )
                               {
-                                return Available.format == want.format &&
-                                       Available.colorSpace == want.colorSpace;
+                                return Available.format == Want.format &&
+                                       Available.colorSpace == Want.colorSpace;
                               } );
 
       if ( I != availableFormats.end() )
@@ -326,11 +298,11 @@ namespace Engine::Renderer
   vk::PresentModeKHR SwapChain::ChoosePresentMode(
     const std::vector<vk::PresentModeKHR> & availableModes )
   {
-    for ( const auto & candidate : availableModes )
+    for ( const auto & Candidate : availableModes )
     {
-      if ( candidate == vk::PresentModeKHR::eMailbox )
+      if ( Candidate == vk::PresentModeKHR::eMailbox )
       {
-        return candidate;
+        return Candidate;
       }
     }
 

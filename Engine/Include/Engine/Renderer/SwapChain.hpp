@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan_raii.hpp>
 
 #include "Engine/Core/Macro.hpp"
 #include "Engine/Core/Types.hpp"
@@ -18,20 +18,22 @@ namespace Engine::Renderer
     DISALLOW_MOVE( SwapChain );
 
   public:
-    SwapChain( const Device & device, vk::SurfaceKHR surface, u32 width,
-               u32 height );
+    SwapChain( const Device & device, const vk::raii::SurfaceKHR & surface,
+               u32 width, u32 height );
     ~SwapChain() = default;
 
     void Recreate( u32 width, u32 height );
 
-    [[nodiscard]] vk::SwapchainKHR                     Get() const;
-    [[nodiscard]] vk::Format                           GetImageFormat() const;
-    [[nodiscard]] vk::Extent2D                         GetExtent() const;
-    [[nodiscard]] const std::vector<vk::Image> &       GetImages() const;
-    [[nodiscard]] const std::vector<vk::ImageView> &   GetImageViews() const;
-    [[nodiscard]] const std::vector<vk::Framebuffer> & GetFramebuffers() const;
-    [[nodiscard]] vk::RenderPass                       GetRenderPass() const;
-    [[nodiscard]] std::size_t                          GetImageCount() const;
+    [[nodiscard]] const vk::raii::SwapchainKHR & Get() const;
+    [[nodiscard]] vk::Format                     GetImageFormat() const;
+    [[nodiscard]] vk::Extent2D                   GetExtent() const;
+    [[nodiscard]] const std::vector<vk::Image> & GetImages() const;
+    [[nodiscard]] const std::vector<vk::raii::ImageView> &
+    GetImageViews() const;
+    [[nodiscard]] const std::vector<vk::raii::Framebuffer> &
+                                               GetFramebuffers() const;
+    [[nodiscard]] const vk::raii::RenderPass & GetRenderPass() const;
+    [[nodiscard]] std::size_t                  GetImageCount() const;
 
   private:
     struct SwapChainSupportDetails
@@ -45,31 +47,29 @@ namespace Engine::Renderer
     void CreateImageViews();
     void CreateRenderPass();
     void CreateFramebuffers();
-    void Cleanup();
 
     [[nodiscard]] SwapChainSupportDetails
-    QuerySwapChainSupport( vk::PhysicalDevice device ) const;
+    QuerySwapChainSupport( const vk::raii::PhysicalDevice & device ) const;
 
     static vk::SurfaceFormatKHR ChooseSurfaceFormat(
       const std::vector<vk::SurfaceFormatKHR> & availableFormats );
-    static vk::PresentModeKHR ChoosePresentMode(
-
-      const std::vector<vk::PresentModeKHR> & availableModes );
+    static vk::PresentModeKHR
+    ChoosePresentMode( const std::vector<vk::PresentModeKHR> & availableModes );
 
     [[nodiscard]] vk::Extent2D
     ChooseExtent( const vk::SurfaceCapabilitiesKHR & capabilities ) const;
 
-    const Device & m_Device;
-    vk::SurfaceKHR m_Surface;
-    u32            m_Width;
-    u32            m_Height;
+    const Device &               m_Device;
+    const vk::raii::SurfaceKHR & m_Surface;
+    u32                          m_Width;
+    u32                          m_Height;
 
-    vk::SwapchainKHR             m_SwapChain;
-    std::vector<vk::Image>       m_Images;
-    vk::Format                   m_ImageFormat;
-    vk::Extent2D                 m_Extent;
-    std::vector<vk::ImageView>   m_ImageViews;
-    std::vector<vk::Framebuffer> m_Framebuffers;
-    vk::RenderPass               m_RenderPass;
+    vk::raii::SwapchainKHR             m_SwapChain;
+    std::vector<vk::Image>             m_Images;
+    vk::Format                         m_ImageFormat;
+    vk::Extent2D                       m_Extent;
+    std::vector<vk::raii::ImageView>   m_ImageViews;
+    std::vector<vk::raii::Framebuffer> m_Framebuffers;
+    vk::raii::RenderPass               m_RenderPass;
   };
 } // namespace Engine::Renderer

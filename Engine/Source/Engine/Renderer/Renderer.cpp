@@ -1,5 +1,3 @@
-#include <memory>
-
 #include "Engine/Renderer/Device.hpp"
 #include "Engine/Renderer/SwapChain.hpp"
 #include "Engine/Platform/Window.hpp"
@@ -14,12 +12,16 @@ namespace Engine::Renderer
 
   Renderer::Renderer( Platform::Window & window )
     : m_Window( window )
+    , m_Instance( nullptr )
+    , m_Surface( nullptr )
     , m_Device( nullptr )
     , m_SwapChain( nullptr )
+    , m_CommandPool( nullptr )
     , m_CurrentFrame( 0 )
     , m_ImageIndex( 0 )
     , m_IsFrameStarted( false )
     , m_IsFramebufferResized( false )
+    , m_DebugMessenger( nullptr )
   {
     CreateInstance();
     SetupDebugMessenger();
@@ -40,51 +42,6 @@ namespace Engine::Renderer
     {
       m_Device->Wait();
     }
-
-    for ( std::size_t i = 0; i < s_MaxFramesInFlight; ++i )
-    {
-      if ( m_ImageSemaphores.at( i ) )
-      {
-        m_Device->Get().destroySemaphore( m_ImageSemaphores.at( i ) );
-      }
-
-      if ( m_FencesInFlight.at( i ) )
-      {
-        m_Device->Get().destroyFence( m_FencesInFlight.at( i ) );
-      }
-    }
-
-    for ( auto semaphore : m_RenderSemaphores )
-    {
-      if ( semaphore )
-      {
-        m_Device->Get().destroySemaphore( semaphore );
-      }
-    }
-
-    if ( m_CommandPool )
-    {
-      m_Device->Get().destroyCommandPool( m_CommandPool );
-    }
-
-    m_SwapChain.reset();
-    m_Device.reset();
-
-    if ( m_Surface )
-    {
-      m_Instance.destroySurfaceKHR( m_Surface );
-    }
-
-    if ( m_DebugMessenger )
-    {
-      m_Instance.destroyDebugUtilsMessengerEXT( m_DebugMessenger, nullptr,
-                                                m_Dispatch );
-    }
-
-    if ( m_Instance )
-    {
-      m_Instance.destroy();
-    }
   }
 
   void Renderer::BeginDraw()
@@ -102,7 +59,7 @@ namespace Engine::Renderer
     }
 
     const auto Wait = m_Device->Get().waitForFences(
-      1, &m_FencesInFlight.at( m_CurrentFrame ), vk::True,
+      { *m_FencesInFlight.at( m_CurrentFrame ) }, vk::True,
       std::numeric_limits<u64>::max() );
 
     if ( Wait != vk::Result::eSuccess )
@@ -111,24 +68,24 @@ namespace Engine::Renderer
       return;
     }
 
-    const auto Acquired = m_Device->Get().acquireNextImageKHR(
-      m_SwapChain->Get(), std::numeric_limits<u64>::max(),
-      m_ImageSemaphores.at( m_CurrentFrame ), nullptr );
+    const auto Acquired = m_SwapChain->Get().acquireNextImage(
+      std::numeric_limits<u64>::max(),
+      *m_ImageSemaphores.at( m_CurrentFrame ) );
 
-    if ( Acquired.result == vk::Result::eErrorOutOfDateKHR )
+    if ( Acquired.first == vk::Result::eErrorOutOfDateKHR )
     {
       RecreateSwapChain();
       return;
     }
 
-    if ( Acquired.result != vk::Result::eSuccess &&
-         Acquired.result != vk::Result::eSuboptimalKHR )
+    if ( Acquired.first != vk::Result::eSuccess &&
+         Acquired.first != vk::Result::eSuboptimalKHR )
     {
       LOG_FATAL( "Failed to acquire swap chain image!" );
       return;
     }
 
-    m_ImageIndex = Acquired.value;
+    m_ImageIndex = Acquired.second;
 
     if ( m_ImageIndex >= m_ImagesInFlight.size() )
     {
@@ -137,30 +94,23 @@ namespace Engine::Renderer
       return;
     }
 
-    // If image is currently in flight, wait for it to be available
     if ( m_ImagesInFlight.at( m_ImageIndex ) != nullptr )
     {
-      const auto WaitResult = m_Device->Get().waitForFences(
-        1, &m_ImagesInFlight.at( m_ImageIndex ), vk::True,
+      const vk::Result waitResult = m_Device->Get().waitForFences(
+        { **m_ImagesInFlight.at( m_ImageIndex ) }, vk::True,
         std::numeric_limits<u64>::max() );
 
-      if ( WaitResult != vk::Result::eSuccess )
+      if ( waitResult != vk::Result::eSuccess )
       {
         LOG_ERROR( "Failed to wait for image fence!" );
         return;
       }
     }
 
-    m_ImagesInFlight.at( m_ImageIndex ) = m_FencesInFlight.at( m_CurrentFrame );
+    m_ImagesInFlight.at( m_ImageIndex ) =
+      &m_FencesInFlight.at( m_CurrentFrame );
 
-    const auto ResetResult =
-      m_Device->Get().resetFences( 1, &m_FencesInFlight.at( m_CurrentFrame ) );
-
-    if ( ResetResult != vk::Result::eSuccess )
-    {
-      LOG_FATAL( "Failed to reset fence: {}", vk::to_string( ResetResult ) );
-      return;
-    }
+    m_Device->Get().resetFences( { *m_FencesInFlight.at( m_CurrentFrame ) } );
 
     m_CommandBuffers.at( m_CurrentFrame ).reset();
 
@@ -195,29 +145,29 @@ namespace Engine::Renderer
     m_CommandBuffers.at( m_CurrentFrame ).endRenderPass();
     m_CommandBuffers.at( m_CurrentFrame ).end();
 
-    const vk::Semaphore Waits[] = { m_ImageSemaphores.at( m_CurrentFrame ) };
+    const vk::Semaphore waits[] = { *m_ImageSemaphores.at( m_CurrentFrame ) };
     constexpr vk::PipelineStageFlags Stages[] = {
       vk::PipelineStageFlagBits::eColorAttachmentOutput };
 
     vk::SubmitInfo submission {};
     submission.waitSemaphoreCount   = 1;
-    submission.pWaitSemaphores      = Waits;
+    submission.pWaitSemaphores      = waits;
     submission.pWaitDstStageMask    = Stages;
     submission.commandBufferCount   = 1;
-    submission.pCommandBuffers      = &m_CommandBuffers.at( m_CurrentFrame );
-    submission.pSignalSemaphores    = &m_RenderSemaphores.at( m_ImageIndex );
+    submission.pCommandBuffers      = &*m_CommandBuffers.at( m_CurrentFrame );
+    submission.pSignalSemaphores    = &*m_RenderSemaphores.at( m_ImageIndex );
     submission.signalSemaphoreCount = 1;
 
     m_Device->GetGraphicsQueue().submit(
-      submission, m_FencesInFlight.at( m_CurrentFrame ) );
+      submission, *m_FencesInFlight.at( m_CurrentFrame ) );
 
     vk::PresentInfoKHR present = {};
-    present.pWaitSemaphores    = &m_RenderSemaphores.at( m_ImageIndex );
+    present.pWaitSemaphores    = &*m_RenderSemaphores.at( m_ImageIndex );
     present.waitSemaphoreCount = 1;
 
-    const vk::SwapchainKHR SwapChains[] = { m_SwapChain->Get() };
+    const vk::SwapchainKHR swapChains[] = { *m_SwapChain->Get() };
     present.swapchainCount              = 1;
-    present.pSwapchains                 = SwapChains;
+    present.pSwapchains                 = swapChains;
     present.pImageIndices               = &m_ImageIndex;
 
     if ( const auto Result = m_Device->GetPresentQueue().presentKHR( present );
@@ -300,7 +250,7 @@ namespace Engine::Renderer
 
     try
     {
-      m_Instance = vk::createInstance( instance );
+      m_Instance = m_Context.createInstance( instance );
     }
     catch ( const vk::SystemError & E )
     {
@@ -312,12 +262,6 @@ namespace Engine::Renderer
   {
     if ( s_IsValidationLayerEnabled && IsValidationLayerSupported() )
     {
-      const auto VkGetInstanceProcAddr =
-        m_Loader.getProcAddress<PFN_vkGetInstanceProcAddr>(
-          "vkGetInstanceProcAddr" );
-      m_Dispatch =
-        vk::detail::DispatchLoaderDynamic { m_Instance, VkGetInstanceProcAddr };
-
       vk::DebugUtilsMessengerCreateInfoEXT messenger = {};
       messenger.messageSeverity =
         vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
@@ -331,8 +275,7 @@ namespace Engine::Renderer
 
       try
       {
-        m_DebugMessenger = m_Instance.createDebugUtilsMessengerEXT(
-          messenger, nullptr, m_Dispatch );
+        m_DebugMessenger = m_Instance.createDebugUtilsMessengerEXT( messenger );
       }
       catch ( const vk::SystemError & E )
       {
@@ -343,24 +286,24 @@ namespace Engine::Renderer
 
   void Renderer::CreateSurface()
   {
-    auto result = m_Window.CreateSurface( m_Instance );
+    auto result = m_Window.CreateSurface( *m_Instance );
     if ( !result )
     {
-      LOG_ERROR( "Failed to create surface!\n\t{}", result.GetError() );
+      LOG_ERROR( "Failed to create surface: {}", result.GetError() );
       return;
     }
 
-    m_Surface = result.GetValue();
+    m_Surface = vk::raii::SurfaceKHR( m_Instance, result.GetValue() );
   }
 
   void Renderer::CreateCommandPool()
   {
-    const auto & [ m_GraphicsFamily, m_PresentFamily ] =
+    const auto & [ graphicsFamily, presentFamily ] =
       m_Device->GetQueueFamilyIndices();
 
     vk::CommandPoolCreateInfo commandPool = {};
     commandPool.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
-    commandPool.queueFamilyIndex = m_GraphicsFamily.value();
+    commandPool.queueFamilyIndex = graphicsFamily.value();
 
     try
     {
@@ -374,22 +317,26 @@ namespace Engine::Renderer
 
   void Renderer::CreateCommandBuffers()
   {
-    m_CommandBuffers.resize( s_MaxFramesInFlight );
+    m_CommandBuffers.clear();
+    m_CommandBuffers.reserve( s_MaxFramesInFlight );
 
     vk::CommandBufferAllocateInfo commandBuffer = {};
-    commandBuffer.commandPool                   = m_CommandPool;
-    commandBuffer.level = vk::CommandBufferLevel::ePrimary;
-    commandBuffer.commandBufferCount =
-      static_cast<u32>( m_CommandBuffers.size() );
+    commandBuffer.commandPool                   = *m_CommandPool;
+    commandBuffer.level              = vk::CommandBufferLevel::ePrimary;
+    commandBuffer.commandBufferCount = s_MaxFramesInFlight;
 
     try
     {
-      m_CommandBuffers =
+      auto commandBuffers =
         m_Device->Get().allocateCommandBuffers( commandBuffer );
+      for ( auto && buffer : commandBuffers )
+      {
+        m_CommandBuffers.emplace_back( std::move( buffer ) );
+      }
     }
-    catch ( const vk::SystemError & E )
+    catch ( const vk::SystemError & e )
     {
-      LOG_FATAL( "Failed to allocate command buffers: {}", E.what() );
+      LOG_FATAL( "Failed to allocate command buffers: {}", e.what() );
     }
   }
 
@@ -397,9 +344,14 @@ namespace Engine::Renderer
   {
     const std::size_t ImageCount = m_SwapChain->GetImageCount();
 
-    m_ImageSemaphores.resize( s_MaxFramesInFlight );
-    m_RenderSemaphores.resize( ImageCount );
-    m_FencesInFlight.resize( s_MaxFramesInFlight );
+    m_ImageSemaphores.clear();
+    m_RenderSemaphores.clear();
+    m_FencesInFlight.clear();
+    m_ImagesInFlight.clear();
+
+    m_ImageSemaphores.reserve( s_MaxFramesInFlight );
+    m_RenderSemaphores.reserve( ImageCount );
+    m_FencesInFlight.reserve( s_MaxFramesInFlight );
     m_ImagesInFlight.resize( ImageCount, nullptr );
 
     if constexpr ( s_MaxFramesInFlight == 0 )
@@ -411,13 +363,14 @@ namespace Engine::Renderer
     fence.flags               = vk::FenceCreateFlagBits::eSignaled;
 
     constexpr vk::SemaphoreCreateInfo Semaphore = {};
+
     for ( std::size_t i = 0; i < s_MaxFramesInFlight; ++i )
     {
       try
       {
-        m_ImageSemaphores.at( i ) =
-          m_Device->Get().createSemaphore( Semaphore );
-        m_FencesInFlight.at( i ) = m_Device->Get().createFence( fence );
+        m_ImageSemaphores.emplace_back(
+          m_Device->Get().createSemaphore( Semaphore ) );
+        m_FencesInFlight.emplace_back( m_Device->Get().createFence( fence ) );
       }
       catch ( const vk::SystemError & E )
       {
@@ -429,8 +382,8 @@ namespace Engine::Renderer
     {
       try
       {
-        m_RenderSemaphores.at( i ) =
-          m_Device->Get().createSemaphore( Semaphore );
+        m_RenderSemaphores.emplace_back(
+          m_Device->Get().createSemaphore( Semaphore ) );
       }
       catch ( const vk::SystemError & E )
       {
@@ -459,13 +412,13 @@ namespace Engine::Renderer
   {
     const auto Available = vk::enumerateInstanceLayerProperties();
 
-    for ( const char * name : s_ValidationLayers )
+    for ( const char * Name : s_ValidationLayers )
     {
       bool isFound = false;
 
-      for ( const auto & properties : Available )
+      for ( const auto & Properties : Available )
       {
-        if ( std::strcmp( name, properties.layerName ) == 0 )
+        if ( std::strcmp( Name, Properties.layerName ) == 0 )
         {
           isFound = true;
           break;

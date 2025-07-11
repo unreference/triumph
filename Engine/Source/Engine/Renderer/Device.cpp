@@ -10,28 +10,33 @@ namespace Engine::Renderer
     vk::KHRSwapchainExtensionName,
   };
 
-  Device::Device( const vk::Instance instance, const vk::SurfaceKHR surface )
+  Device::Device( const vk::raii::Instance &   instance,
+                  const vk::raii::SurfaceKHR & surface )
+    : m_PhysicalDevice( nullptr )
+    , m_Device( nullptr )
+    , m_GraphicsQueue( nullptr )
+    , m_PresentQueue( nullptr )
   {
     PickPhysicalDevice( instance, surface );
     CreateLogicalDevice( surface );
   }
 
-  vk::Device Device::Get() const
+  const vk::raii::Device & Device::Get() const
   {
     return m_Device;
   }
 
-  vk::PhysicalDevice Device::GetPhysicalDevice() const
+  const vk::raii::PhysicalDevice & Device::GetPhysicalDevice() const
   {
     return m_PhysicalDevice;
   }
 
-  vk::Queue Device::GetGraphicsQueue() const
+  const vk::raii::Queue & Device::GetGraphicsQueue() const
   {
     return m_GraphicsQueue;
   }
 
-  vk::Queue Device::GetPresentQueue() const
+  const vk::raii::Queue & Device::GetPresentQueue() const
   {
     return m_PresentQueue;
   }
@@ -46,8 +51,8 @@ namespace Engine::Renderer
     m_Device.waitIdle();
   }
 
-  void Device::PickPhysicalDevice( const vk::Instance   instance,
-                                   const vk::SurfaceKHR surface )
+  void Device::PickPhysicalDevice( const vk::raii::Instance &   instance,
+                                   const vk::raii::SurfaceKHR & surface )
   {
     const auto Devices = instance.enumeratePhysicalDevices();
 
@@ -56,30 +61,31 @@ namespace Engine::Renderer
       LOG_ERROR( "Failed to find a GPU with Vulkan support!" );
     }
 
-    for ( const auto & device : Devices )
+    for ( const auto & Device : Devices )
     {
-      if ( IsDeviceSuitable( device, surface ) )
+      if ( IsDeviceSuitable( Device, surface ) )
       {
-        m_PhysicalDevice = device;
+        m_PhysicalDevice =
+          std::move( const_cast<vk::raii::PhysicalDevice &>( Device ) );
         break;
       }
     }
 
-    if ( !m_PhysicalDevice )
+    if ( !*m_PhysicalDevice )
     {
       LOG_FATAL( "Failed to find a suitable GPU with Vulkan support!" );
     }
 
-    const auto Props = m_PhysicalDevice.getProperties();
-    LOG_INFO( "Selected GPU: {}", Props.deviceName.data() );
+    const auto Properties = m_PhysicalDevice.getProperties();
+    LOG_INFO( "Selected GPU: {}", Properties.deviceName.data() );
   }
 
-  void Device::CreateLogicalDevice( const vk::SurfaceKHR surface )
+  void Device::CreateLogicalDevice( const vk::raii::SurfaceKHR & surface )
   {
     m_QueueFamilyIndices = GetQueueFamilies( m_PhysicalDevice, surface );
 
     std::vector<vk::DeviceQueueCreateInfo> queueInfos;
-    const std::set                         UniqueFamilies = {
+    const std::set<u32>                    UniqueFamilies = {
       m_QueueFamilyIndices.m_GraphicsFamily.value(),
       m_QueueFamilyIndices.m_PresentFamily.value() };
 
@@ -119,8 +125,8 @@ namespace Engine::Renderer
   }
 
   Device::QueueFamilyIndices
-  Device::GetQueueFamilies( const vk::PhysicalDevice device,
-                            const vk::SurfaceKHR     surface )
+  Device::GetQueueFamilies( const vk::raii::PhysicalDevice & device,
+                            const vk::raii::SurfaceKHR &     surface )
   {
     QueueFamilyIndices indices = {};
 
@@ -132,7 +138,7 @@ namespace Engine::Renderer
         indices.m_GraphicsFamily = i;
       }
 
-      if ( device.getSurfaceSupportKHR( i, surface ) )
+      if ( device.getSurfaceSupportKHR( i, *surface ) )
       {
         indices.m_PresentFamily = i;
       }
@@ -146,8 +152,8 @@ namespace Engine::Renderer
     return indices;
   }
 
-  bool Device::IsDeviceSuitable( const vk::PhysicalDevice device,
-                                 const vk::SurfaceKHR     surface )
+  bool Device::IsDeviceSuitable( const vk::raii::PhysicalDevice & device,
+                                 const vk::raii::SurfaceKHR &     surface )
   {
     const QueueFamilyIndices Indices     = GetQueueFamilies( device, surface );
     const bool               IsSupported = IsExtensionSupported( device );
@@ -155,8 +161,8 @@ namespace Engine::Renderer
 
     if ( IsSupported )
     {
-      const auto Formats      = device.getSurfaceFormatsKHR( surface );
-      const auto PresentModes = device.getSurfacePresentModesKHR( surface );
+      const auto Formats      = device.getSurfaceFormatsKHR( *surface );
+      const auto PresentModes = device.getSurfacePresentModesKHR( *surface );
 
       isValidSwapChain = !Formats.empty() && !PresentModes.empty();
     }
@@ -164,15 +170,15 @@ namespace Engine::Renderer
     return Indices.IsComplete() && IsSupported && isValidSwapChain;
   }
 
-  bool Device::IsExtensionSupported( const vk::PhysicalDevice device )
+  bool Device::IsExtensionSupported( const vk::raii::PhysicalDevice & device )
   {
     const auto Supported = device.enumerateDeviceExtensionProperties();
     std::set<std::string> required = { s_Extensions.begin(),
                                        s_Extensions.end() };
 
-    for ( const auto & extension : Supported )
+    for ( const auto & Extension : Supported )
     {
-      required.erase( extension.extensionName.data() );
+      required.erase( Extension.extensionName.data() );
     }
 
     return required.empty();

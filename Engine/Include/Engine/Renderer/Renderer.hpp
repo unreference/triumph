@@ -3,7 +3,7 @@
 #include <vector>
 #include <memory>
 
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan_raii.hpp>
 
 #include "Engine/Core/Macro.hpp"
 #include "Engine/Core/Types.hpp"
@@ -59,20 +59,21 @@ namespace Engine::Renderer
                    const vk::DebugUtilsMessengerCallbackDataEXT * pCallbackData,
                    void *                                         pUserData );
 
-    Platform::Window & m_Window;
-    vk::Instance       m_Instance;
-    vk::SurfaceKHR     m_Surface;
+    Platform::Window &   m_Window;
+    vk::raii::Context    m_Context;
+    vk::raii::Instance   m_Instance;
+    vk::raii::SurfaceKHR m_Surface;
 
     std::unique_ptr<Device>    m_Device;
     std::unique_ptr<SwapChain> m_SwapChain;
 
-    vk::CommandPool                m_CommandPool;
-    std::vector<vk::CommandBuffer> m_CommandBuffers;
+    vk::raii::CommandPool                m_CommandPool;
+    std::vector<vk::raii::CommandBuffer> m_CommandBuffers;
 
-    std::vector<vk::Semaphore> m_ImageSemaphores;
-    std::vector<vk::Semaphore> m_RenderSemaphores;
-    std::vector<vk::Fence>     m_FencesInFlight;
-    std::vector<vk::Fence>     m_ImagesInFlight;
+    std::vector<vk::raii::Semaphore> m_ImageSemaphores;
+    std::vector<vk::raii::Semaphore> m_RenderSemaphores;
+    std::vector<vk::raii::Fence>     m_FencesInFlight;
+    std::vector<vk::raii::Fence *>   m_ImagesInFlight;
 
     u32  m_CurrentFrame;
     u32  m_ImageIndex;
@@ -81,9 +82,7 @@ namespace Engine::Renderer
 
     vk::ClearColorValue m_ClearColor;
 
-    vk::detail::DynamicLoader         m_Loader;
-    vk::detail::DispatchLoaderDynamic m_Dispatch;
-    vk::DebugUtilsMessengerEXT        m_DebugMessenger;
+    vk::raii::DebugUtilsMessengerEXT m_DebugMessenger;
 
     static constexpr u32                   s_MaxFramesInFlight        = 2;
     static constexpr bool                  s_IsValidationLayerEnabled = true;
