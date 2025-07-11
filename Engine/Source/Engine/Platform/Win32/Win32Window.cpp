@@ -1,8 +1,6 @@
 #include <functional>
-#include <functional>
 #include <variant>
 
-#include <variant>
 #if defined( PLATFORM_WIN32 )
 
 #include <vector>
@@ -21,6 +19,8 @@ namespace Engine::Platform::Win32
   bool Win32Window::s_IsClassRegistered = false;
 
   Win32Window::Win32Window( const WindowProps & props )
+    : m_pHandle( nullptr )
+    , m_pInstance( nullptr )
   {
     Init( props );
   }
@@ -498,7 +498,7 @@ namespace Engine::Platform::Win32
     return Window::AddEventListener( std::move( callback ) );
   }
 
-  bool Win32Window::RemoveEventListener( u8 id )
+  bool Win32Window::RemoveEventListener( const u8 id )
   {
     return Window::RemoveEventListener( id );
   }

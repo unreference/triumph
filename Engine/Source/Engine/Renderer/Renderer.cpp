@@ -54,11 +54,11 @@ namespace Engine::Renderer
       }
     }
 
-    for ( std::size_t i = 0; i < m_RenderSemaphores.size(); ++i )
+    for ( auto semaphore : m_RenderSemaphores )
     {
-      if ( m_RenderSemaphores.at( i ) )
+      if ( semaphore )
       {
-        m_Device->Get().destroySemaphore( m_RenderSemaphores.at( i ) );
+        m_Device->Get().destroySemaphore( semaphore );
       }
     }
 
@@ -196,7 +196,7 @@ namespace Engine::Renderer
     m_CommandBuffers.at( m_CurrentFrame ).end();
 
     const vk::Semaphore Waits[] = { m_ImageSemaphores.at( m_CurrentFrame ) };
-    const vk::PipelineStageFlags Stages[] = {
+    constexpr vk::PipelineStageFlags Stages[] = {
       vk::PipelineStageFlagBits::eColorAttachmentOutput };
 
     vk::SubmitInfo submission {};
@@ -220,14 +220,14 @@ namespace Engine::Renderer
     present.pSwapchains                 = SwapChains;
     present.pImageIndices               = &m_ImageIndex;
 
-    auto result = m_Device->GetPresentQueue().presentKHR( present );
-    if ( result == vk::Result::eErrorOutOfDateKHR ||
-         result == vk::Result::eSuboptimalKHR || m_IsFramebufferResized )
+    if ( const auto Result = m_Device->GetPresentQueue().presentKHR( present );
+         Result == vk::Result::eErrorOutOfDateKHR ||
+         Result == vk::Result::eSuboptimalKHR || m_IsFramebufferResized )
     {
       m_IsFramebufferResized = false;
       RecreateSwapChain();
     }
-    else if ( result != vk::Result::eSuccess )
+    else if ( Result != vk::Result::eSuccess )
     {
       LOG_ERROR( "Failed to present swap chain image!" );
       return;
@@ -244,7 +244,6 @@ namespace Engine::Renderer
 
   void Renderer::Resize( u32 width, u32 height )
   {
-    LOG_INFO( "Window resized to {}x{}", width, height );
     m_IsFramebufferResized = true;
   }
 
@@ -255,10 +254,9 @@ namespace Engine::Renderer
 
   void Renderer::CreateInstance()
   {
-    if ( !IsValidationLayerSupported() )
+    if ( s_IsValidationLayerEnabled && !IsValidationLayerSupported() )
     {
-      LOG_ERROR( "No validation layers available!" );
-      return;
+      LOG_WARN( "No validation layers available!" );
     }
 
     vk::ApplicationInfo app = {};
@@ -312,7 +310,7 @@ namespace Engine::Renderer
 
   void Renderer::SetupDebugMessenger()
   {
-    if constexpr ( s_IsValidationLayerEnabled )
+    if ( s_IsValidationLayerEnabled && IsValidationLayerSupported() )
     {
       const auto VkGetInstanceProcAddr =
         m_Loader.getProcAddress<PFN_vkGetInstanceProcAddr>(
@@ -497,9 +495,8 @@ namespace Engine::Renderer
 
   VKAPI_ATTR vk::Bool32 VKAPI_CALL Renderer::DebugCallback(
     const vk::DebugUtilsMessageSeverityFlagBitsEXT severity,
-    vk::DebugUtilsMessageTypeFlagsEXT              type,
-    const vk::DebugUtilsMessengerCallbackDataEXT * pCallbackData,
-    void *                                         pUserData )
+    vk::DebugUtilsMessageTypeFlagsEXT,
+    const vk::DebugUtilsMessengerCallbackDataEXT * pCallbackData, void * )
   {
     if ( severity >= vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning )
     {

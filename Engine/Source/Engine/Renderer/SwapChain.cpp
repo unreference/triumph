@@ -11,6 +11,7 @@ namespace Engine::Renderer
     , m_Surface( surface )
     , m_Width( width )
     , m_Height( height )
+    , m_ImageFormat()
   {
     Create();
     CreateImageViews();
@@ -119,8 +120,8 @@ namespace Engine::Renderer
     swapChain.presentMode    = PresentMode;
     swapChain.clipped        = vk::True;
 
-    vk::SwapchainKHR old   = m_SwapChain;
-    swapChain.oldSwapchain = old;
+    const vk::SwapchainKHR Old = m_SwapChain;
+    swapChain.oldSwapchain     = Old;
 
     try
     {
@@ -131,9 +132,9 @@ namespace Engine::Renderer
       LOG_FATAL( "Failed to create swap chain: {}", E.what() );
     }
 
-    if ( old )
+    if ( Old )
     {
-      m_Device.Get().destroySwapchainKHR( old );
+      m_Device.Get().destroySwapchainKHR( Old );
     }
 
     m_Images      = m_Device.Get().getSwapchainImagesKHR( m_SwapChain );
@@ -306,12 +307,12 @@ namespace Engine::Renderer
     for ( const auto & want : Prefer )
     {
       const auto I =
-        std::find_if( availableFormats.begin(), availableFormats.end(),
-                      [ & ]( const vk::SurfaceFormatKHR & available )
-                      {
-                        return available.format == want.format &&
-                               available.colorSpace == want.colorSpace;
-                      } );
+        std::ranges::find_if( availableFormats,
+                              [ & ]( const vk::SurfaceFormatKHR & Available )
+                              {
+                                return Available.format == want.format &&
+                                       Available.colorSpace == want.colorSpace;
+                              } );
 
       if ( I != availableFormats.end() )
       {

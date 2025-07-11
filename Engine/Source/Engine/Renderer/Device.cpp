@@ -70,8 +70,8 @@ namespace Engine::Renderer
       LOG_FATAL( "Failed to find a suitable GPU with Vulkan support!" );
     }
 
-    auto props = m_PhysicalDevice.getProperties();
-    // LOG_INFO( "Selected GPU: {}", props.deviceName.data() );
+    const auto Props = m_PhysicalDevice.getProperties();
+    LOG_INFO( "Selected GPU: {}", Props.deviceName.data() );
   }
 
   void Device::CreateLogicalDevice( const vk::SurfaceKHR surface )

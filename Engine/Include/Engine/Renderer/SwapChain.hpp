@@ -24,14 +24,14 @@ namespace Engine::Renderer
 
     void Recreate( u32 width, u32 height );
 
-    vk::SwapchainKHR                     Get() const;
-    vk::Format                           GetImageFormat() const;
-    vk::Extent2D                         GetExtent() const;
-    const std::vector<vk::Image> &       GetImages() const;
-    const std::vector<vk::ImageView> &   GetImageViews() const;
-    const std::vector<vk::Framebuffer> & GetFramebuffers() const;
-    vk::RenderPass                       GetRenderPass() const;
-    std::size_t                          GetImageCount() const;
+    [[nodiscard]] vk::SwapchainKHR                     Get() const;
+    [[nodiscard]] vk::Format                           GetImageFormat() const;
+    [[nodiscard]] vk::Extent2D                         GetExtent() const;
+    [[nodiscard]] const std::vector<vk::Image> &       GetImages() const;
+    [[nodiscard]] const std::vector<vk::ImageView> &   GetImageViews() const;
+    [[nodiscard]] const std::vector<vk::Framebuffer> & GetFramebuffers() const;
+    [[nodiscard]] vk::RenderPass                       GetRenderPass() const;
+    [[nodiscard]] std::size_t                          GetImageCount() const;
 
   private:
     struct SwapChainSupportDetails
@@ -47,7 +47,7 @@ namespace Engine::Renderer
     void CreateFramebuffers();
     void Cleanup();
 
-    SwapChainSupportDetails
+    [[nodiscard]] SwapChainSupportDetails
     QuerySwapChainSupport( vk::PhysicalDevice device ) const;
 
     static vk::SurfaceFormatKHR ChooseSurfaceFormat(
@@ -55,7 +55,8 @@ namespace Engine::Renderer
     static vk::PresentModeKHR ChoosePresentMode(
 
       const std::vector<vk::PresentModeKHR> & availableModes );
-    vk::Extent2D
+
+    [[nodiscard]] vk::Extent2D
     ChooseExtent( const vk::SurfaceCapabilitiesKHR & capabilities ) const;
 
     const Device & m_Device;

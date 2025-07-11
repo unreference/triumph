@@ -116,46 +116,84 @@ namespace Engine::Utility::String
 
   bool IsUtf8( const std::string_view string )
   {
-    for ( std::size_t i = 0; i < string.length(); )
+    for ( std::size_t i = 0; i < string.length(); /**/ )
     {
-
-      if ( const auto C = static_cast<unsigned char>( string.at( i ) );
-           C < 0x80 )
+      if ( const auto Char1 = static_cast<u8>( string.at( i ) ); Char1 < 0x80 )
       {
         // ASCII
-        i++;
+        i += 1;
       }
-      else if ( C >> 5 == 0x06 )
+      else if ( Char1 >> 5 == 0b110 )
       {
-        // 110xxxxx: 2-byte sequence
-        if ( i + 1 >= string.length() ||
-             ( static_cast<unsigned char>( string.at( i + 1 ) ) & 0xC0 ) !=
-               0x80 )
+        // 2-byte sequence: 110xxxxx 10xxxxxx
+        if ( i + 1 >= string.length() )
+        {
+          return false;
+        }
+
+        const auto Char2 = static_cast<u8>( string.at( i + 1 ) );
+        if ( ( Char2 & 0xC0 ) != 0x80 )
+        {
+          return false;
+        }
+
+        // Reject overlong (i.e.: U+007F encoded as 0xC1 0xBF)
+        if ( const auto Code = ( Char1 & 0x1F ) << 6 | Char2 & 0x3F;
+             Code < 0x80 )
         {
           return false;
         }
 
         i += 2;
       }
-      else if ( C >> 4 == 0x0E )
+      else if ( Char1 >> 4 == 0b1110 )
       {
-        // 1110xxxx: 3-byte sequence
-        if ( i + 2 >= string.length() ||
-             ( string.at( i + 1 ) & 0xC0 ) != 0x80 ||
-             ( string.at( i + 2 ) & 0xC0 ) != 0x80 )
+        // 3-byte sequence: 1110xxxx 10xxxxxx 10xxxxxx
+        if ( i + 2 >= string.length() )
+        {
+          return false;
+        }
+
+        const auto Char2 = static_cast<u8>( string.at( i + 1 ) );
+        const auto Char3 = static_cast<u8>( string.at( i + 2 ) );
+        if ( ( Char2 & 0xC0 ) != 0x80 || ( Char3 & 0xC0 ) != 0x80 )
+        {
+          return false;
+        }
+
+        const auto Code =
+          ( Char1 & 0x0F ) << 12 | ( Char2 & 0x3F ) << 6 | Char3 & 0x3F;
+
+        // Reject overlong or surrogates (0xD800-0xDFFF)
+        if ( Code < 0x800 || ( Code >= 0xD800 && Code <= 0xDFFF ) )
         {
           return false;
         }
 
         i += 3;
       }
-      else if ( C >> 3 == 0x1E )
+      else if ( Char1 >> 3 == 0b11110 )
       {
-        // 11110xxx: 4-byte sequence
-        if ( i + 3 >= string.length() ||
-             ( string.at( i + 1 ) & 0xC0 ) != 0x80 ||
-             ( string.at( i + 3 ) & 0xC0 ) != 0x80 ||
-             ( string.at( i + 3 ) & 0xC0 ) != 0x80 )
+        // 4-byte sequence: 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+        if ( i + 3 >= string.length() )
+        {
+          return false;
+        }
+
+        const auto Char2 = static_cast<u8>( string.at( i + 1 ) );
+        const auto Char3 = static_cast<u8>( string.at( i + 2 ) );
+        const auto Char4 = static_cast<u8>( string.at( i + 3 ) );
+        if ( ( Char2 & 0xC0 ) != 0x80 || ( Char3 & 0xC0 ) != 0x80 ||
+             ( Char4 & 0xC0 ) != 0x80 )
+        {
+          return false;
+        }
+
+        const auto Code = ( Char2 & 0x07 ) << 18 | ( Char2 & 0x3F ) << 12 |
+                          ( Char3 & 0x3F ) << 6 | Char4 & 0x3F;
+
+        // Reject overlong or > U+10FFFF
+        if ( Code < 0x10000 || Code > 0x10FFFF )
         {
           return false;
         }
@@ -173,22 +211,24 @@ namespace Engine::Utility::String
 
   bool IsUtf16( const std::wstring_view string )
   {
-    for ( std::size_t i = 0; i < string.length(); )
+    for ( std::size_t i = 0; i < string.length(); /**/ )
     {
-      if ( const wchar_t C = string.at( i ); C < 0xD800 || C > 0xDFFF )
+      if ( const auto Char1 = string.at( i ); Char1 < 0xD800 || Char1 > 0xDFFF )
       {
-        // Not a surrogate pair
-        i++;
+        // Plain BMP
+        i += 1;
       }
-      else if ( C >= 0xD800 && C <= 0xDBFF )
+      else if ( Char1 <= 0xDBFF )
       {
         // High surrogate
         if ( i + 1 >= string.length() )
         {
           return false;
         }
-        if ( const wchar_t Low = string.at( i + 1 );
-             Low < 0xDC00 || Low > 0xDFFF )
+
+        // Low surrogate must be 0xD800..0xDFFF
+        if ( const auto Char2 = string.at( i + 1 );
+             Char2 < 0xDC00 || Char2 > 0xDFFF )
         {
           return false;
         }
@@ -197,7 +237,7 @@ namespace Engine::Utility::String
       }
       else
       {
-        // Low surrogate without high surrogate
+        // Low surrogate without a preceding high
         return false;
       }
     }

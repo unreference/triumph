@@ -1,8 +1,5 @@
 #pragma once
 #include <functional>
-#include <functional>
-#include <variant>
-#include <variant>
 
 #if defined( PLATFORM_WIN32 )
 
@@ -53,21 +50,21 @@ namespace Engine::Platform::Win32
     struct WindowData
     {
       std::string m_Title;
-      u32         m_Width;
-      u32         m_Height;
+      u32         m_Width  = 0;
+      u32         m_Height = 0;
 
-      bool m_IsVsynced;
-      bool m_IsFullScreen;
-      bool m_ShouldClose;
+      bool m_IsVsynced    = false;
+      bool m_IsFullScreen = false;
+      bool m_ShouldClose  = false;
 
-      RECT  m_WindowedRect;
-      DWORD m_WindowedStyle;
+      RECT  m_WindowedRect  = {};
+      DWORD m_WindowedStyle = {};
     };
 
     void Init( const WindowProps & props );
 
     static LRESULT CALLBACK WindowProc( HWND hWnd, UINT uMsg, WPARAM wParam,
-                                        LPARAM lParm );
+                                        LPARAM lParam );
     LRESULT HandleMessage( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam );
 
     HWND       m_pHandle;

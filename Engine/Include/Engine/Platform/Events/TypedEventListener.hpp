@@ -36,7 +36,7 @@ namespace Engine::Platform::Events
     [[nodiscard]] bool IsValid() const
     {
       return m_Listener.IsValid();
-    };
+    }
 
     void Remove()
     {

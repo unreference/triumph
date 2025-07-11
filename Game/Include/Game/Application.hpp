@@ -4,10 +4,10 @@
 
 namespace Game
 {
-  class Application : public Engine::Core::ApplicationBase
+  class Application final : public Engine::Core::ApplicationBase
   {
   public:
-    Application()           = default;
+    Application();
     ~Application() override = default;
 
   protected:

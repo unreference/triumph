@@ -7,6 +7,13 @@
 
 namespace Game
 {
+  Application::Application()
+    : m_EscapeKeyPressedListener()
+    , m_KeyPressedListener()
+    , m_MouseButtonPressedListener()
+    , m_TotalTime( 0 )
+  {
+  }
   void Application::Init()
   {
     GetRenderer().Clear( 0.5f, 0.5f, 0.5f );

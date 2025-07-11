@@ -9,6 +9,10 @@
 namespace Engine::Core
 {
   ApplicationBase::ApplicationBase()
+    : m_EventListener()
+    , m_ResizeListener()
+    , m_IsRunning( false )
+    , m_LastFrameTime( 0 )
   {
     InternalInit();
   }
@@ -75,7 +79,6 @@ namespace Engine::Core
     }
 
     m_IsRunning = true;
-    LOG_INFO( "Successfully initialized engine" );
   }
 
   void ApplicationBase::InternalShutdown()
@@ -89,8 +92,6 @@ namespace Engine::Core
     {
       m_Window.reset();
     }
-
-    LOG_INFO( "Successfully shutdown engine" );
   }
 
   void ApplicationBase::SetupEventListeners()
