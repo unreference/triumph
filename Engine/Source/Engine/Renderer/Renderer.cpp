@@ -43,11 +43,6 @@ namespace Engine::Renderer
 
     for ( std::size_t i = 0; i < s_MaxFramesInFlight; ++i )
     {
-      if ( m_RenderSemaphores.at( i ) )
-      {
-        m_Device->Get().destroySemaphore( m_RenderSemaphores.at( i ) );
-      }
-
       if ( m_ImageSemaphores.at( i ) )
       {
         m_Device->Get().destroySemaphore( m_ImageSemaphores.at( i ) );
@@ -56,6 +51,14 @@ namespace Engine::Renderer
       if ( m_FencesInFlight.at( i ) )
       {
         m_Device->Get().destroyFence( m_FencesInFlight.at( i ) );
+      }
+    }
+
+    for ( std::size_t i = 0; i < m_RenderSemaphores.size(); ++i )
+    {
+      if ( m_RenderSemaphores.at( i ) )
+      {
+        m_Device->Get().destroySemaphore( m_RenderSemaphores.at( i ) );
       }
     }
 
@@ -92,35 +95,73 @@ namespace Engine::Renderer
       return;
     }
 
-    auto wait = m_Device->Get().waitForFences(
+    if ( m_CurrentFrame >= s_MaxFramesInFlight )
+    {
+      LOG_FATAL( "Current frame index out of bounds: {}", m_CurrentFrame );
+      return;
+    }
+
+    const auto Wait = m_Device->Get().waitForFences(
       1, &m_FencesInFlight.at( m_CurrentFrame ), vk::True,
       std::numeric_limits<u64>::max() );
 
-    if ( wait != vk::Result::eSuccess )
+    if ( Wait != vk::Result::eSuccess )
     {
       LOG_ERROR( "Failed to wait for fence!" );
       return;
     }
 
-    auto acquired = m_Device->Get().acquireNextImageKHR(
+    const auto Acquired = m_Device->Get().acquireNextImageKHR(
       m_SwapChain->Get(), std::numeric_limits<u64>::max(),
       m_ImageSemaphores.at( m_CurrentFrame ), nullptr );
 
-    if ( acquired.result == vk::Result::eErrorOutOfDateKHR )
+    if ( Acquired.result == vk::Result::eErrorOutOfDateKHR )
     {
       RecreateSwapChain();
       return;
     }
 
-    if ( acquired.result != vk::Result::eSuccess &&
-         acquired.result != vk::Result::eSuboptimalKHR )
+    if ( Acquired.result != vk::Result::eSuccess &&
+         Acquired.result != vk::Result::eSuboptimalKHR )
     {
       LOG_FATAL( "Failed to acquire swap chain image!" );
+      return;
     }
 
-    m_ImageIndex = acquired.value;
+    m_ImageIndex = Acquired.value;
 
-    m_Device->Get().resetFences( 1, &m_FencesInFlight.at( m_CurrentFrame ) );
+    if ( m_ImageIndex >= m_ImagesInFlight.size() )
+    {
+      LOG_FATAL( "Image index out of bounds: {} >= {}", m_ImageIndex,
+                 m_ImagesInFlight.size() );
+      return;
+    }
+
+    // If image is currently in flight, wait for it to be available
+    if ( m_ImagesInFlight.at( m_ImageIndex ) != nullptr )
+    {
+      const auto WaitResult = m_Device->Get().waitForFences(
+        1, &m_ImagesInFlight.at( m_ImageIndex ), vk::True,
+        std::numeric_limits<u64>::max() );
+
+      if ( WaitResult != vk::Result::eSuccess )
+      {
+        LOG_ERROR( "Failed to wait for image fence!" );
+        return;
+      }
+    }
+
+    m_ImagesInFlight.at( m_ImageIndex ) = m_FencesInFlight.at( m_CurrentFrame );
+
+    const auto ResetResult =
+      m_Device->Get().resetFences( 1, &m_FencesInFlight.at( m_CurrentFrame ) );
+
+    if ( ResetResult != vk::Result::eSuccess )
+    {
+      LOG_FATAL( "Failed to reset fence: {}", vk::to_string( ResetResult ) );
+      return;
+    }
+
     m_CommandBuffers.at( m_CurrentFrame ).reset();
 
     constexpr vk::CommandBufferBeginInfo CommandBuffer = {};
@@ -154,27 +195,25 @@ namespace Engine::Renderer
     m_CommandBuffers.at( m_CurrentFrame ).endRenderPass();
     m_CommandBuffers.at( m_CurrentFrame ).end();
 
-    vk::Semaphore          waits[] = { m_ImageSemaphores.at( m_CurrentFrame ) };
-    vk::PipelineStageFlags stages[] = {
+    const vk::Semaphore Waits[] = { m_ImageSemaphores.at( m_CurrentFrame ) };
+    const vk::PipelineStageFlags Stages[] = {
       vk::PipelineStageFlagBits::eColorAttachmentOutput };
 
     vk::SubmitInfo submission {};
-    submission.waitSemaphoreCount = 1;
-    submission.pWaitSemaphores    = waits;
-    submission.pWaitDstStageMask  = stages;
-    submission.commandBufferCount = 1;
-    submission.pCommandBuffers    = &m_CommandBuffers.at( m_CurrentFrame );
-
-    vk::Semaphore signals[] = { m_RenderSemaphores.at( m_CurrentFrame ) };
+    submission.waitSemaphoreCount   = 1;
+    submission.pWaitSemaphores      = Waits;
+    submission.pWaitDstStageMask    = Stages;
+    submission.commandBufferCount   = 1;
+    submission.pCommandBuffers      = &m_CommandBuffers.at( m_CurrentFrame );
+    submission.pSignalSemaphores    = &m_RenderSemaphores.at( m_ImageIndex );
     submission.signalSemaphoreCount = 1;
-    submission.pSignalSemaphores    = signals;
 
     m_Device->GetGraphicsQueue().submit(
       submission, m_FencesInFlight.at( m_CurrentFrame ) );
 
     vk::PresentInfoKHR present = {};
+    present.pWaitSemaphores    = &m_RenderSemaphores.at( m_ImageIndex );
     present.waitSemaphoreCount = 1;
-    present.pWaitSemaphores    = signals;
 
     const vk::SwapchainKHR SwapChains[] = { m_SwapChain->Get() };
     present.swapchainCount              = 1;
@@ -275,11 +314,11 @@ namespace Engine::Renderer
   {
     if constexpr ( s_IsValidationLayerEnabled )
     {
-      auto vkGetInstanceProcAddr =
+      const auto VkGetInstanceProcAddr =
         m_Loader.getProcAddress<PFN_vkGetInstanceProcAddr>(
           "vkGetInstanceProcAddr" );
       m_Dispatch =
-        vk::detail::DispatchLoaderDynamic { m_Instance, vkGetInstanceProcAddr };
+        vk::detail::DispatchLoaderDynamic { m_Instance, VkGetInstanceProcAddr };
 
       vk::DebugUtilsMessengerCreateInfoEXT messenger = {};
       messenger.messageSeverity =
@@ -358,11 +397,14 @@ namespace Engine::Renderer
 
   void Renderer::CreateSyncObjects()
   {
-    m_ImageSemaphores.resize( s_MaxFramesInFlight );
-    m_RenderSemaphores.resize( s_MaxFramesInFlight );
-    m_FencesInFlight.resize( s_MaxFramesInFlight );
+    const std::size_t ImageCount = m_SwapChain->GetImageCount();
 
-    if ( s_MaxFramesInFlight == 0 )
+    m_ImageSemaphores.resize( s_MaxFramesInFlight );
+    m_RenderSemaphores.resize( ImageCount );
+    m_FencesInFlight.resize( s_MaxFramesInFlight );
+    m_ImagesInFlight.resize( ImageCount, nullptr );
+
+    if constexpr ( s_MaxFramesInFlight == 0 )
     {
       LOG_FATAL( "s_MaxFramesInFlight cannot be zero!" );
     }
@@ -371,13 +413,11 @@ namespace Engine::Renderer
     fence.flags               = vk::FenceCreateFlagBits::eSignaled;
 
     constexpr vk::SemaphoreCreateInfo Semaphore = {};
-    for ( std::size_t i = 0; i < s_MaxFramesInFlight; i++ )
+    for ( std::size_t i = 0; i < s_MaxFramesInFlight; ++i )
     {
       try
       {
         m_ImageSemaphores.at( i ) =
-          m_Device->Get().createSemaphore( Semaphore );
-        m_RenderSemaphores.at( i ) =
           m_Device->Get().createSemaphore( Semaphore );
         m_FencesInFlight.at( i ) = m_Device->Get().createFence( fence );
       }
@@ -386,9 +426,22 @@ namespace Engine::Renderer
         LOG_FATAL( "Failed to create synchronization objects: {}", E.what() );
       }
     }
+
+    for ( std::size_t i = 0; i < ImageCount; ++i )
+    {
+      try
+      {
+        m_RenderSemaphores.at( i ) =
+          m_Device->Get().createSemaphore( Semaphore );
+      }
+      catch ( const vk::SystemError & E )
+      {
+        LOG_FATAL( "Failed to create render semaphores: {}", E.what() );
+      }
+    }
   }
 
-  void Renderer::RecreateSwapChain()
+  void Renderer::RecreateSwapChain() const
   {
     u32 width  = m_Window.GetWidth();
     u32 height = m_Window.GetHeight();
@@ -404,15 +457,15 @@ namespace Engine::Renderer
     m_SwapChain->Recreate( width, height );
   }
 
-  bool Renderer::IsValidationLayerSupported() const
+  bool Renderer::IsValidationLayerSupported()
   {
-    auto available = vk::enumerateInstanceLayerProperties();
+    const auto Available = vk::enumerateInstanceLayerProperties();
 
     for ( const char * name : s_ValidationLayers )
     {
       bool isFound = false;
 
-      for ( const auto & properties : available )
+      for ( const auto & properties : Available )
       {
         if ( std::strcmp( name, properties.layerName ) == 0 )
         {
@@ -443,7 +496,7 @@ namespace Engine::Renderer
   }
 
   VKAPI_ATTR vk::Bool32 VKAPI_CALL Renderer::DebugCallback(
-    vk::DebugUtilsMessageSeverityFlagBitsEXT       severity,
+    const vk::DebugUtilsMessageSeverityFlagBitsEXT severity,
     vk::DebugUtilsMessageTypeFlagsEXT              type,
     const vk::DebugUtilsMessengerCallbackDataEXT * pCallbackData,
     void *                                         pUserData )

@@ -128,7 +128,9 @@ namespace Engine::Utility::String
       else if ( C >> 5 == 0x06 )
       {
         // 110xxxxx: 2-byte sequence
-        if ( i + 1 >= string.length() || ( string.at( i ) + 1 & 0xC0 ) != 0x80 )
+        if ( i + 1 >= string.length() ||
+             ( static_cast<unsigned char>( string.at( i + 1 ) ) & 0xC0 ) !=
+               0x80 )
         {
           return false;
         }
@@ -139,8 +141,8 @@ namespace Engine::Utility::String
       {
         // 1110xxxx: 3-byte sequence
         if ( i + 2 >= string.length() ||
-             ( string.at( i ) + 1 & 0xC0 ) != 0x80 ||
-             ( string.at( i ) + 2 & 0xC0 ) != 0x80 )
+             ( string.at( i + 1 ) & 0xC0 ) != 0x80 ||
+             ( string.at( i + 2 ) & 0xC0 ) != 0x80 )
         {
           return false;
         }
@@ -151,9 +153,9 @@ namespace Engine::Utility::String
       {
         // 11110xxx: 4-byte sequence
         if ( i + 3 >= string.length() ||
-             ( string.at( i ) + 1 & 0xC0 ) != 0x80 ||
-             ( string.at( i ) + 3 & 0xC0 ) != 0x80 ||
-             ( string.at( i ) + 3 & 0xC0 ) != 0x80 )
+             ( string.at( i + 1 ) & 0xC0 ) != 0x80 ||
+             ( string.at( i + 3 ) & 0xC0 ) != 0x80 ||
+             ( string.at( i + 3 ) & 0xC0 ) != 0x80 )
         {
           return false;
         }
@@ -178,14 +180,14 @@ namespace Engine::Utility::String
         // Not a surrogate pair
         i++;
       }
-      else if ( C >= 0xD00 && C <= 0xDBFF )
+      else if ( C >= 0xD800 && C <= 0xDBFF )
       {
         // High surrogate
         if ( i + 1 >= string.length() )
         {
           return false;
         }
-        if ( const wchar_t Low = string.at( i ) + 1;
+        if ( const wchar_t Low = string.at( i + 1 );
              Low < 0xDC00 || Low > 0xDFFF )
         {
           return false;

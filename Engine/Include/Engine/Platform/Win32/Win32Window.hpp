@@ -1,4 +1,8 @@
 #pragma once
+#include <functional>
+#include <functional>
+#include <variant>
+#include <variant>
 
 #if defined( PLATFORM_WIN32 )
 
@@ -41,9 +45,9 @@ namespace Engine::Platform::Win32
     void SetVsync( bool isEnabled ) override;
     void SetFullScreen( bool isEnabled ) override;
 
-    u64  AddEventListener( EventCallback callback ) override;
-    bool RemoveEventListener( u64 id ) override;
-    void ClearEventListeners() override;
+    std::uint8_t AddEventListener( EventCallback callback ) override;
+    bool         RemoveEventListener( u8 id ) override;
+    void         ClearEventListeners() override;
 
   private:
     struct WindowData

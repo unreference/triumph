@@ -1,3 +1,5 @@
+#include <functional>
+
 #include "Engine/Utility/Logger.hpp"
 
 #include "Engine/Platform/Window.hpp"
@@ -9,7 +11,7 @@ namespace Engine::Platform
   {
   }
 
-  u64 Window::AddEventListener( EventCallback callback )
+  u8 Window::AddEventListener( EventCallback callback )
   {
     if ( !callback )
     {
@@ -17,7 +19,7 @@ namespace Engine::Platform
       return 0;
     }
 
-    u64 id = m_NextListenerId++;
+    u8 id = m_NextListenerId++;
     m_EventListeners.emplace_back(
       EventListener { id, std::move( callback ) } );
 
@@ -25,16 +27,16 @@ namespace Engine::Platform
     return id;
   }
 
-  bool Window::RemoveEventListener( u64 id )
+  bool Window::RemoveEventListener( u8 id )
   {
-    auto i = std::find_if( m_EventListeners.begin(), m_EventListeners.end(),
-                           [ id ]( const EventListener & listener )
-                           { return listener.id == id; } );
+    const auto I = std::ranges::find_if(
+      m_EventListeners,
+      [ id ]( const EventListener & listener ) { return listener.id == id; } );
 
-    if ( i != m_EventListeners.end() )
+    if ( I != m_EventListeners.end() )
     {
       LOG_INFO( "Removed event listener with ID: {}", id );
-      m_EventListeners.erase( i );
+      m_EventListeners.erase( I );
       return true;
     }
 
@@ -49,22 +51,21 @@ namespace Engine::Platform
     m_EventListeners.clear();
   }
 
-  void Window::DispatchEvent( const Events::WindowEvent & event )
+  void Window::DispatchEvent( const Events::WindowEvent & event ) const
   {
-    for ( const auto & listener : m_EventListeners )
+    for ( const auto & [ Id, callback ] : m_EventListeners )
     {
       try
       {
-        listener.callback( event );
+        callback( event );
       }
       catch ( const std::exception & E )
       {
-        LOG_ERROR( "Exception in event listener {}: {}", listener.id,
-                   E.what() );
+        LOG_ERROR( "Exception in event listener {}: {}", Id, E.what() );
       }
       catch ( ... )
       {
-        LOG_ERROR( "Unknown exception in event listener {}", listener.id );
+        LOG_ERROR( "Unknown exception in event listener {}", Id );
       }
     }
   }

@@ -49,14 +49,14 @@ namespace Engine::Renderer
   void Device::PickPhysicalDevice( const vk::Instance   instance,
                                    const vk::SurfaceKHR surface )
   {
-    auto devices = instance.enumeratePhysicalDevices();
+    const auto Devices = instance.enumeratePhysicalDevices();
 
-    if ( devices.empty() )
+    if ( Devices.empty() )
     {
       LOG_ERROR( "Failed to find a GPU with Vulkan support!" );
     }
 
-    for ( const auto & device : devices )
+    for ( const auto & device : Devices )
     {
       if ( IsDeviceSuitable( device, surface ) )
       {

@@ -56,22 +56,22 @@ namespace Engine::Platform
     virtual void SetVsync( bool isEnabled )            = 0;
     virtual void SetFullScreen( bool isEnabled )       = 0;
 
-    virtual u64  AddEventListener( EventCallback callback ) = 0;
-    virtual bool RemoveEventListener( u64 id )              = 0;
+    virtual u8   AddEventListener( EventCallback callback ) = 0;
+    virtual bool RemoveEventListener( u8 id )               = 0;
     virtual void ClearEventListeners()                      = 0;
 
   protected:
-    void DispatchEvent( const Events::WindowEvent & event );
+    void DispatchEvent( const Events::WindowEvent & event ) const;
 
   private:
     struct EventListener
     {
-      u64           id = 0;
+      u8            id = 0;
       EventCallback callback;
     };
 
     std::vector<EventListener> m_EventListeners;
-    u64                        m_NextListenerId;
+    u8                         m_NextListenerId;
   };
 
 } // namespace Engine::Platform

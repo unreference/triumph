@@ -17,12 +17,12 @@ namespace Engine::Platform::Events
     EventListener( EventListener && other ) noexcept;
     EventListener & operator=( EventListener && other ) noexcept;
 
-    bool IsValid() const;
+    [[nodiscard]] bool IsValid() const;
 
     void Remove();
 
   private:
     Window * m_Window;
-    u64      m_Id;
+    u8       m_Id;
   };
 } // namespace Engine::Platform::Events

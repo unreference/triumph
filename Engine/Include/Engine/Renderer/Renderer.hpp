@@ -48,9 +48,9 @@ namespace Engine::Renderer
     void CreateCommandPool();
     void CreateCommandBuffers();
     void CreateSyncObjects();
-    void RecreateSwapChain();
+    void RecreateSwapChain() const;
 
-    [[nodiscard]] bool                      IsValidationLayerSupported() const;
+    [[nodiscard]] static bool               IsValidationLayerSupported();
     [[nodiscard]] std::vector<const char *> GetRequiredExtensions() const;
 
     static VKAPI_ATTR vk::Bool32 VKAPI_CALL
@@ -72,6 +72,7 @@ namespace Engine::Renderer
     std::vector<vk::Semaphore> m_ImageSemaphores;
     std::vector<vk::Semaphore> m_RenderSemaphores;
     std::vector<vk::Fence>     m_FencesInFlight;
+    std::vector<vk::Fence>     m_ImagesInFlight;
 
     u32  m_CurrentFrame;
     u32  m_ImageIndex;

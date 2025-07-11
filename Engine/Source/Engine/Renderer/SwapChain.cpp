@@ -120,7 +120,7 @@ namespace Engine::Renderer
     swapChain.clipped        = vk::True;
 
     vk::SwapchainKHR old   = m_SwapChain;
-    swapChain.oldSwapchain = m_SwapChain;
+    swapChain.oldSwapchain = old;
 
     try
     {
@@ -129,6 +129,11 @@ namespace Engine::Renderer
     catch ( const vk::SystemError & E )
     {
       LOG_FATAL( "Failed to create swap chain: {}", E.what() );
+    }
+
+    if ( old )
+    {
+      m_Device.Get().destroySwapchainKHR( old );
     }
 
     m_Images      = m_Device.Get().getSwapchainImagesKHR( m_SwapChain );
@@ -291,12 +296,26 @@ namespace Engine::Renderer
   vk::SurfaceFormatKHR SwapChain::ChooseSurfaceFormat(
     const std::vector<vk::SurfaceFormatKHR> & availableFormats )
   {
-    for ( const auto & candidate : availableFormats )
+    const std::vector<vk::SurfaceFormatKHR> Prefer = {
+      { vk::Format::eB8G8R8A8Srgb, vk::ColorSpaceKHR::eSrgbNonlinear },
+      { vk::Format::eR8G8B8A8Srgb, vk::ColorSpaceKHR::eSrgbNonlinear },
+      { vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear },
+      { vk::Format::eR8G8B8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear },
+    };
+
+    for ( const auto & want : Prefer )
     {
-      if ( candidate.format == vk::Format::eB8G8R8A8Srgb &&
-           candidate.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear )
+      const auto I =
+        std::find_if( availableFormats.begin(), availableFormats.end(),
+                      [ & ]( const vk::SurfaceFormatKHR & available )
+                      {
+                        return available.format == want.format &&
+                               available.colorSpace == want.colorSpace;
+                      } );
+
+      if ( I != availableFormats.end() )
       {
-        return candidate;
+        return *I;
       }
     }
 

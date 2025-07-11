@@ -1,3 +1,8 @@
+#include <functional>
+#include <functional>
+#include <variant>
+
+#include <variant>
 #if defined( PLATFORM_WIN32 )
 
 #include <vector>
@@ -488,12 +493,12 @@ namespace Engine::Platform::Win32
     return DefWindowProcW( hWnd, uMsg, wParam, lParam );
   }
 
-  u64 Win32Window::AddEventListener( EventCallback callback )
+  std::uint8_t Win32Window::AddEventListener( EventCallback callback )
   {
     return Window::AddEventListener( std::move( callback ) );
   }
 
-  bool Win32Window::RemoveEventListener( u64 id )
+  bool Win32Window::RemoveEventListener( u8 id )
   {
     return Window::RemoveEventListener( id );
   }

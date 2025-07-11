@@ -43,8 +43,9 @@ namespace Engine::Utility
     static void Log( const LogMetadata & metadata, const LogMessage & message );
 
     template <typename... Args>
-    static void Log( const std::source_location & loc, LogSeverity severity,
-                     std::string_view fmt, Args &&... args )
+    static void Log( const std::source_location & loc,
+                     const LogSeverity severity, std::string_view fmt,
+                     Args &&... args )
     {
       if ( severity < s_LogSeverity )
       {

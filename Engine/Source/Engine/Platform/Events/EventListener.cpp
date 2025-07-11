@@ -11,7 +11,7 @@ namespace Engine::Platform::Events
     m_Id = m_Window->AddEventListener( std::move( callback ) );
     if ( m_Id == 0 )
     {
-      LOG_WARN( "Failed to add event listener" );
+      LOG_FATAL( "Failed to add event listener!" );
       m_Window = nullptr;
     }
   }

@@ -33,7 +33,7 @@ namespace Engine::Platform::Events
       return *this;
     }
 
-    bool IsValid() const
+    [[nodiscard]] bool IsValid() const
     {
       return m_Listener.IsValid();
     };
