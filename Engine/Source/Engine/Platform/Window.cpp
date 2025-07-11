@@ -31,7 +31,7 @@ namespace Engine::Platform
   {
     const auto I = std::ranges::find_if(
       m_EventListeners,
-      [ id ]( const EventListener & listener ) { return listener.id == id; } );
+      [ id ]( const EventListener & listener ) { return listener.m_Id == id; } );
 
     if ( I != m_EventListeners.end() )
     {

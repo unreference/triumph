@@ -1,12 +1,6 @@
-#include <Engine/Core/ApplicationBase.hpp>
 #include <Engine/Utility/Logger.hpp>
 
-#include "Game/Application.hpp"
-
-Engine::Core::ApplicationBase * Engine::Core::Create()
-{
-  return new Game::Application();
-}
+#include "Main.hpp"
 
 int main()
 {

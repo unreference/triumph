@@ -66,8 +66,8 @@ namespace Engine::Platform
   private:
     struct EventListener
     {
-      u8            id = 0;
-      EventCallback callback;
+      u8            m_Id = 0;
+      EventCallback m_Callback;
     };
 
     std::vector<EventListener> m_EventListeners;

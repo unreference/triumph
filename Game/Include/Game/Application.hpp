@@ -8,6 +8,7 @@ namespace Game
   {
   public:
     Application();
+    ~Application() = default;
 
   protected:
     void Init() override;

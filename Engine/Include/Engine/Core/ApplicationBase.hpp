@@ -38,8 +38,8 @@ namespace Engine::Core
     void InternalShutdown();
     void SetupEngineEventListeners();
 
-    std::unique_ptr<Platform::Window>   m_Window;
-    std::unique_ptr<Renderer::Renderer> m_Renderer;
+    std::unique_ptr<Platform::Window>   m_pWindow;
+    std::unique_ptr<Renderer::Renderer> m_pRenderer;
 
     Platform::Events::WindowCloseListener  m_CloseListener;
     Platform::Events::WindowResizeListener m_ResizeListener;

@@ -4,6 +4,7 @@ set(GAME_SOURCES
 )
 
 set(GAME_HEADERS
+        Include/Main.hpp
         Include/Game/Application.hpp
 )
 

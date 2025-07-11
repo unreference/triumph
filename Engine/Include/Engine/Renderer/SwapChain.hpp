@@ -60,16 +60,16 @@ namespace Engine::Renderer
     ChooseExtent( const vk::SurfaceCapabilitiesKHR & capabilities ) const;
 
     const Device &               m_Device;
-    const vk::raii::SurfaceKHR & m_Surface;
+    const vk::raii::SurfaceKHR & m_pSurface;
     u32                          m_Width;
     u32                          m_Height;
 
-    vk::raii::SwapchainKHR             m_SwapChain;
+    vk::raii::SwapchainKHR             m_pSwapChain;
     std::vector<vk::Image>             m_Images;
     vk::Format                         m_ImageFormat;
     vk::Extent2D                       m_Extent;
-    std::vector<vk::raii::ImageView>   m_ImageViews;
-    std::vector<vk::raii::Framebuffer> m_Framebuffers;
-    vk::raii::RenderPass               m_RenderPass;
+    std::vector<vk::raii::ImageView>   m_pImageViews;
+    std::vector<vk::raii::Framebuffer> m_pFramebuffers;
+    vk::raii::RenderPass               m_pRenderPass;
   };
 } // namespace Engine::Renderer

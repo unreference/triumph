@@ -28,20 +28,20 @@ namespace Engine::Core
 
     auto last = std::chrono::high_resolution_clock::now();
 
-    while ( m_IsRunning && !m_Window->ShouldClose() )
+    while ( m_IsRunning && !m_pWindow->ShouldClose() )
     {
       auto       time  = std::chrono::high_resolution_clock::now();
       const auto Delta = std::chrono::duration<f32>( time - last ).count();
       last             = time;
 
-      m_Window->PollEvents();
+      m_pWindow->PollEvents();
       Update( Delta );
 
-      m_Renderer->BeginDraw();
-      if ( m_Renderer->IsFrameInProgress() )
+      m_pRenderer->BeginDraw();
+      if ( m_pRenderer->IsFrameInProgress() )
       {
         Draw();
-        m_Renderer->EndDraw();
+        m_pRenderer->EndDraw();
       }
     }
 
@@ -55,12 +55,12 @@ namespace Engine::Core
 
   Platform::Window & ApplicationBase::GetWindow() const
   {
-    return *m_Window;
+    return *m_pWindow;
   }
 
   Renderer::Renderer & ApplicationBase::GetRenderer() const
   {
-    return *m_Renderer;
+    return *m_pRenderer;
   }
 
   void ApplicationBase::InternalInit()
@@ -69,8 +69,8 @@ namespace Engine::Core
     {
       const Platform::WindowProps Props = {};
 
-      m_Window   = Platform::Window::Create( Props );
-      m_Renderer = std::make_unique<Renderer::Renderer>( *m_Window );
+      m_pWindow   = Platform::Window::Create( Props );
+      m_pRenderer = std::make_unique<Renderer::Renderer>( *m_pWindow );
       SetupEngineEventListeners();
     }
     catch ( const std::exception & E )
@@ -93,14 +93,14 @@ namespace Engine::Core
       m_ResizeListener.Remove();
     }
 
-    if ( m_Renderer )
+    if ( m_pRenderer )
     {
-      m_Renderer.reset();
+      m_pRenderer.reset();
     }
 
-    if ( m_Window )
+    if ( m_pWindow )
     {
-      m_Window.reset();
+      m_pWindow.reset();
     }
   }
 
@@ -108,10 +108,10 @@ namespace Engine::Core
   {
     using namespace Platform::Events;
     m_CloseListener = WindowCloseListener(
-      *m_Window, [ this ]( const WindowCloseEvent & ) { Close(); } );
+      *m_pWindow, [ this ]( const WindowCloseEvent & ) { Close(); } );
 
     m_ResizeListener = WindowResizeListener(
-      *m_Window, [ this ]( const WindowResizeEvent & event )
-      { m_Renderer->Resize( event.m_Width, event.m_Height ); } );
+      *m_pWindow, [ this ]( const WindowResizeEvent & event )
+      { m_pRenderer->Resize( event.m_Width, event.m_Height ); } );
   }
 } // namespace Engine::Core

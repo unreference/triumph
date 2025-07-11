@@ -12,24 +12,24 @@ namespace Engine::Renderer
 
   Renderer::Renderer( Platform::Window & window )
     : m_Window( window )
-    , m_Instance( nullptr )
-    , m_Surface( nullptr )
-    , m_Device( nullptr )
-    , m_SwapChain( nullptr )
-    , m_CommandPool( nullptr )
+    , m_pInstance( nullptr )
+    , m_pSurface( nullptr )
+    , m_pDevice( nullptr )
+    , m_pSwapChain( nullptr )
+    , m_pCommandPool( nullptr )
     , m_CurrentFrame( 0 )
     , m_ImageIndex( 0 )
     , m_IsFrameStarted( false )
     , m_IsFramebufferResized( false )
-    , m_DebugMessenger( nullptr )
+    , m_pDebugMessenger( nullptr )
   {
     CreateInstance();
     SetupDebugMessenger();
     CreateSurface();
 
-    m_Device    = std::make_unique<Device>( m_Instance, m_Surface );
-    m_SwapChain = std::make_unique<SwapChain>(
-      *m_Device, m_Surface, m_Window.GetWidth(), m_Window.GetHeight() );
+    m_pDevice    = std::make_unique<Device>( m_pInstance, m_pSurface );
+    m_pSwapChain = std::make_unique<SwapChain>(
+      *m_pDevice, m_pSurface, m_Window.GetWidth(), m_Window.GetHeight() );
 
     CreateCommandPool();
     CreateCommandBuffers();
@@ -38,9 +38,9 @@ namespace Engine::Renderer
 
   Renderer::~Renderer()
   {
-    if ( m_Device )
+    if ( m_pDevice )
     {
-      m_Device->Wait();
+      m_pDevice->Wait();
     }
   }
 
@@ -58,8 +58,8 @@ namespace Engine::Renderer
       return;
     }
 
-    const auto Wait = m_Device->Get().waitForFences(
-      { *m_FencesInFlight.at( m_CurrentFrame ) }, vk::True,
+    const auto Wait = m_pDevice->Get().waitForFences(
+      { *m_pFencesInFlight.at( m_CurrentFrame ) }, vk::True,
       std::numeric_limits<u64>::max() );
 
     if ( Wait != vk::Result::eSuccess )
@@ -68,9 +68,9 @@ namespace Engine::Renderer
       return;
     }
 
-    const auto Acquired = m_SwapChain->Get().acquireNextImage(
+    const auto Acquired = m_pSwapChain->Get().acquireNextImage(
       std::numeric_limits<u64>::max(),
-      *m_ImageSemaphores.at( m_CurrentFrame ) );
+      *m_pImageSemaphores.at( m_CurrentFrame ) );
 
     if ( Acquired.first == vk::Result::eErrorOutOfDateKHR )
     {
@@ -87,17 +87,17 @@ namespace Engine::Renderer
 
     m_ImageIndex = Acquired.second;
 
-    if ( m_ImageIndex >= m_ImagesInFlight.size() )
+    if ( m_ImageIndex >= m_pImagesInFlight.size() )
     {
       LOG_FATAL( "Image index out of bounds: {} >= {}", m_ImageIndex,
-                 m_ImagesInFlight.size() );
+                 m_pImagesInFlight.size() );
       return;
     }
 
-    if ( m_ImagesInFlight.at( m_ImageIndex ) != nullptr )
+    if ( m_pImagesInFlight.at( m_ImageIndex ) != nullptr )
     {
-      const vk::Result waitResult = m_Device->Get().waitForFences(
-        { **m_ImagesInFlight.at( m_ImageIndex ) }, vk::True,
+      const vk::Result waitResult = m_pDevice->Get().waitForFences(
+        { **m_pImagesInFlight.at( m_ImageIndex ) }, vk::True,
         std::numeric_limits<u64>::max() );
 
       if ( waitResult != vk::Result::eSuccess )
@@ -107,10 +107,10 @@ namespace Engine::Renderer
       }
     }
 
-    m_ImagesInFlight.at( m_ImageIndex ) =
-      &m_FencesInFlight.at( m_CurrentFrame );
+    m_pImagesInFlight.at( m_ImageIndex ) =
+      &m_pFencesInFlight.at( m_CurrentFrame );
 
-    m_Device->Get().resetFences( { *m_FencesInFlight.at( m_CurrentFrame ) } );
+    m_pDevice->Get().resetFences( { *m_pFencesInFlight.at( m_CurrentFrame ) } );
 
     m_CommandBuffers.at( m_CurrentFrame ).reset();
 
@@ -118,10 +118,10 @@ namespace Engine::Renderer
     m_CommandBuffers.at( m_CurrentFrame ).begin( CommandBuffer );
 
     vk::RenderPassBeginInfo renderPass = {};
-    renderPass.renderPass              = m_SwapChain->GetRenderPass();
-    renderPass.framebuffer = m_SwapChain->GetFramebuffers().at( m_ImageIndex );
+    renderPass.renderPass              = m_pSwapChain->GetRenderPass();
+    renderPass.framebuffer = m_pSwapChain->GetFramebuffers().at( m_ImageIndex );
     renderPass.renderArea.offset = vk::Offset2D { 0, 0 };
-    renderPass.renderArea.extent = m_SwapChain->GetExtent();
+    renderPass.renderArea.extent = m_pSwapChain->GetExtent();
 
     vk::ClearValue clear       = {};
     clear.color                = m_ClearColor;
@@ -145,7 +145,7 @@ namespace Engine::Renderer
     m_CommandBuffers.at( m_CurrentFrame ).endRenderPass();
     m_CommandBuffers.at( m_CurrentFrame ).end();
 
-    const vk::Semaphore waits[] = { *m_ImageSemaphores.at( m_CurrentFrame ) };
+    const vk::Semaphore waits[] = { *m_pImageSemaphores.at( m_CurrentFrame ) };
     constexpr vk::PipelineStageFlags Stages[] = {
       vk::PipelineStageFlagBits::eColorAttachmentOutput };
 
@@ -155,22 +155,22 @@ namespace Engine::Renderer
     submission.pWaitDstStageMask    = Stages;
     submission.commandBufferCount   = 1;
     submission.pCommandBuffers      = &*m_CommandBuffers.at( m_CurrentFrame );
-    submission.pSignalSemaphores    = &*m_RenderSemaphores.at( m_ImageIndex );
+    submission.pSignalSemaphores    = &*m_pRenderSemaphores.at( m_ImageIndex );
     submission.signalSemaphoreCount = 1;
 
-    m_Device->GetGraphicsQueue().submit(
-      submission, *m_FencesInFlight.at( m_CurrentFrame ) );
+    m_pDevice->GetGraphicsQueue().submit(
+      submission, *m_pFencesInFlight.at( m_CurrentFrame ) );
 
     vk::PresentInfoKHR present = {};
-    present.pWaitSemaphores    = &*m_RenderSemaphores.at( m_ImageIndex );
+    present.pWaitSemaphores    = &*m_pRenderSemaphores.at( m_ImageIndex );
     present.waitSemaphoreCount = 1;
 
-    const vk::SwapchainKHR swapChains[] = { *m_SwapChain->Get() };
+    const vk::SwapchainKHR swapChains[] = { *m_pSwapChain->Get() };
     present.swapchainCount              = 1;
     present.pSwapchains                 = swapChains;
     present.pImageIndices               = &m_ImageIndex;
 
-    if ( const auto Result = m_Device->GetPresentQueue().presentKHR( present );
+    if ( const auto Result = m_pDevice->GetPresentQueue().presentKHR( present );
          Result == vk::Result::eErrorOutOfDateKHR ||
          Result == vk::Result::eSuboptimalKHR || m_IsFramebufferResized )
     {
@@ -250,7 +250,7 @@ namespace Engine::Renderer
 
     try
     {
-      m_Instance = m_Context.createInstance( instance );
+      m_pInstance = m_pContext.createInstance( instance );
     }
     catch ( const vk::SystemError & E )
     {
@@ -275,7 +275,8 @@ namespace Engine::Renderer
 
       try
       {
-        m_DebugMessenger = m_Instance.createDebugUtilsMessengerEXT( messenger );
+        m_pDebugMessenger =
+          m_pInstance.createDebugUtilsMessengerEXT( messenger );
       }
       catch ( const vk::SystemError & E )
       {
@@ -286,20 +287,20 @@ namespace Engine::Renderer
 
   void Renderer::CreateSurface()
   {
-    auto result = m_Window.CreateSurface( *m_Instance );
+    auto result = m_Window.CreateSurface( *m_pInstance );
     if ( !result )
     {
       LOG_ERROR( "Failed to create surface: {}", result.GetError() );
       return;
     }
 
-    m_Surface = vk::raii::SurfaceKHR( m_Instance, result.GetValue() );
+    m_pSurface = vk::raii::SurfaceKHR( m_pInstance, result.GetValue() );
   }
 
   void Renderer::CreateCommandPool()
   {
     const auto & [ graphicsFamily, presentFamily ] =
-      m_Device->GetQueueFamilyIndices();
+      m_pDevice->GetQueueFamilyIndices();
 
     vk::CommandPoolCreateInfo commandPool = {};
     commandPool.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
@@ -307,7 +308,7 @@ namespace Engine::Renderer
 
     try
     {
-      m_CommandPool = m_Device->Get().createCommandPool( commandPool );
+      m_pCommandPool = m_pDevice->Get().createCommandPool( commandPool );
     }
     catch ( const vk::SystemError & E )
     {
@@ -321,38 +322,38 @@ namespace Engine::Renderer
     m_CommandBuffers.reserve( s_MaxFramesInFlight );
 
     vk::CommandBufferAllocateInfo commandBuffer = {};
-    commandBuffer.commandPool                   = *m_CommandPool;
+    commandBuffer.commandPool                   = *m_pCommandPool;
     commandBuffer.level              = vk::CommandBufferLevel::ePrimary;
     commandBuffer.commandBufferCount = s_MaxFramesInFlight;
 
     try
     {
       auto commandBuffers =
-        m_Device->Get().allocateCommandBuffers( commandBuffer );
+        m_pDevice->Get().allocateCommandBuffers( commandBuffer );
       for ( auto && buffer : commandBuffers )
       {
         m_CommandBuffers.emplace_back( std::move( buffer ) );
       }
     }
-    catch ( const vk::SystemError & e )
+    catch ( const vk::SystemError & E )
     {
-      LOG_FATAL( "Failed to allocate command buffers: {}", e.what() );
+      LOG_FATAL( "Failed to allocate command buffers: {}", E.what() );
     }
   }
 
   void Renderer::CreateSyncObjects()
   {
-    const std::size_t ImageCount = m_SwapChain->GetImageCount();
+    const std::size_t ImageCount = m_pSwapChain->GetImageCount();
 
-    m_ImageSemaphores.clear();
-    m_RenderSemaphores.clear();
-    m_FencesInFlight.clear();
-    m_ImagesInFlight.clear();
+    m_pImageSemaphores.clear();
+    m_pRenderSemaphores.clear();
+    m_pFencesInFlight.clear();
+    m_pImagesInFlight.clear();
 
-    m_ImageSemaphores.reserve( s_MaxFramesInFlight );
-    m_RenderSemaphores.reserve( ImageCount );
-    m_FencesInFlight.reserve( s_MaxFramesInFlight );
-    m_ImagesInFlight.resize( ImageCount, nullptr );
+    m_pImageSemaphores.reserve( s_MaxFramesInFlight );
+    m_pRenderSemaphores.reserve( ImageCount );
+    m_pFencesInFlight.reserve( s_MaxFramesInFlight );
+    m_pImagesInFlight.resize( ImageCount, nullptr );
 
     if constexpr ( s_MaxFramesInFlight == 0 )
     {
@@ -368,9 +369,9 @@ namespace Engine::Renderer
     {
       try
       {
-        m_ImageSemaphores.emplace_back(
-          m_Device->Get().createSemaphore( Semaphore ) );
-        m_FencesInFlight.emplace_back( m_Device->Get().createFence( fence ) );
+        m_pImageSemaphores.emplace_back(
+          m_pDevice->Get().createSemaphore( Semaphore ) );
+        m_pFencesInFlight.emplace_back( m_pDevice->Get().createFence( fence ) );
       }
       catch ( const vk::SystemError & E )
       {
@@ -382,8 +383,8 @@ namespace Engine::Renderer
     {
       try
       {
-        m_RenderSemaphores.emplace_back(
-          m_Device->Get().createSemaphore( Semaphore ) );
+        m_pRenderSemaphores.emplace_back(
+          m_pDevice->Get().createSemaphore( Semaphore ) );
       }
       catch ( const vk::SystemError & E )
       {
@@ -404,8 +405,8 @@ namespace Engine::Renderer
       height = m_Window.GetHeight();
     }
 
-    m_Device->Wait();
-    m_SwapChain->Recreate( width, height );
+    m_pDevice->Wait();
+    m_pSwapChain->Recreate( width, height );
   }
 
   bool Renderer::IsValidationLayerSupported()
@@ -446,14 +447,15 @@ namespace Engine::Renderer
     return extensions;
   }
 
-  VKAPI_ATTR vk::Bool32 VKAPI_CALL Renderer::DebugCallback(
-    const vk::DebugUtilsMessageSeverityFlagBitsEXT severity,
-    vk::DebugUtilsMessageTypeFlagsEXT,
-    const vk::DebugUtilsMessengerCallbackDataEXT * pCallbackData, void * )
+  VKAPI_ATTR VKAPI_ATTR vk::Bool32 Renderer::DebugCallback(
+    vk::DebugUtilsMessageSeverityFlagBitsEXT       severity,
+    vk::DebugUtilsMessageTypeFlagsEXT              type,
+    const vk::DebugUtilsMessengerCallbackDataEXT * callbackData,
+    void *                                         userData )
   {
     if ( severity >= vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning )
     {
-      LOG_WARN( "Validation layer: {}", pCallbackData->pMessage );
+      LOG_WARN( "Validation layer: {}", callbackData->pMessage );
     }
 
     return vk::False;

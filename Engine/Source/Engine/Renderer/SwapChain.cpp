@@ -9,12 +9,12 @@ namespace Engine::Renderer
                         const vk::raii::SurfaceKHR & surface, const u32 width,
                         const u32 height )
     : m_Device( device )
-    , m_Surface( surface )
+    , m_pSurface( surface )
     , m_Width( width )
     , m_Height( height )
-    , m_SwapChain( nullptr )
+    , m_pSwapChain( nullptr )
     , m_ImageFormat()
-    , m_RenderPass( nullptr )
+    , m_pRenderPass( nullptr )
   {
     Create();
     CreateImageViews();
@@ -29,12 +29,12 @@ namespace Engine::Renderer
 
     m_Device.Wait();
 
-    m_Framebuffers.clear();
-    m_ImageViews.clear();
+    m_pFramebuffers.clear();
+    m_pImageViews.clear();
     m_Images.clear();
 
-    m_RenderPass = nullptr;
-    m_SwapChain  = nullptr;
+    m_pRenderPass = nullptr;
+    m_pSwapChain  = nullptr;
 
     Create();
     CreateImageViews();
@@ -44,7 +44,7 @@ namespace Engine::Renderer
 
   const vk::raii::SwapchainKHR & SwapChain::Get() const
   {
-    return m_SwapChain;
+    return m_pSwapChain;
   }
 
   vk::Format SwapChain::GetImageFormat() const
@@ -64,17 +64,17 @@ namespace Engine::Renderer
 
   const std::vector<vk::raii::ImageView> & SwapChain::GetImageViews() const
   {
-    return m_ImageViews;
+    return m_pImageViews;
   }
 
   const std::vector<vk::raii::Framebuffer> & SwapChain::GetFramebuffers() const
   {
-    return m_Framebuffers;
+    return m_pFramebuffers;
   }
 
   const vk::raii::RenderPass & SwapChain::GetRenderPass() const
   {
-    return m_RenderPass;
+    return m_pRenderPass;
   }
 
   std::size_t SwapChain::GetImageCount() const
@@ -99,7 +99,7 @@ namespace Engine::Renderer
     }
 
     vk::SwapchainCreateInfoKHR swapChain = {};
-    swapChain.surface                    = *m_Surface;
+    swapChain.surface                    = *m_pSurface;
     swapChain.minImageCount              = imageCount;
     swapChain.imageFormat                = Surface.format;
     swapChain.imageColorSpace            = Surface.colorSpace;
@@ -127,29 +127,29 @@ namespace Engine::Renderer
     swapChain.presentMode    = PresentMode;
     swapChain.clipped        = vk::True;
 
-    if ( *m_SwapChain )
+    if ( *m_pSwapChain )
     {
-      swapChain.oldSwapchain = *m_SwapChain;
+      swapChain.oldSwapchain = *m_pSwapChain;
     }
 
     try
     {
-      m_SwapChain = m_Device.Get().createSwapchainKHR( swapChain );
+      m_pSwapChain = m_Device.Get().createSwapchainKHR( swapChain );
     }
     catch ( const vk::SystemError & E )
     {
       LOG_FATAL( "Failed to create swap chain: {}", E.what() );
     }
 
-    m_Images      = m_SwapChain.getImages();
+    m_Images      = m_pSwapChain.getImages();
     m_ImageFormat = Surface.format;
     m_Extent      = Extent;
   }
 
   void SwapChain::CreateImageViews()
   {
-    m_ImageViews.clear();
-    m_ImageViews.reserve( m_Images.size() );
+    m_pImageViews.clear();
+    m_pImageViews.reserve( m_Images.size() );
 
     for ( const auto & Image : m_Images )
     {
@@ -169,7 +169,7 @@ namespace Engine::Renderer
 
       try
       {
-        m_ImageViews.emplace_back(
+        m_pImageViews.emplace_back(
           m_Device.Get().createImageView( imageView ) );
       }
       catch ( const vk::SystemError & E )
@@ -218,7 +218,7 @@ namespace Engine::Renderer
 
     try
     {
-      m_RenderPass = m_Device.Get().createRenderPass( renderPass );
+      m_pRenderPass = m_Device.Get().createRenderPass( renderPass );
     }
     catch ( const vk::SystemError & E )
     {
@@ -228,15 +228,15 @@ namespace Engine::Renderer
 
   void SwapChain::CreateFramebuffers()
   {
-    m_Framebuffers.clear();
-    m_Framebuffers.reserve( m_ImageViews.size() );
+    m_pFramebuffers.clear();
+    m_pFramebuffers.reserve( m_pImageViews.size() );
 
-    for ( const auto & ImageView : m_ImageViews )
+    for ( const auto & ImageView : m_pImageViews )
     {
       std::array attachments = { *ImageView };
 
       vk::FramebufferCreateInfo framebuffer = {};
-      framebuffer.renderPass                = *m_RenderPass;
+      framebuffer.renderPass                = *m_pRenderPass;
       framebuffer.attachmentCount = static_cast<u32>( attachments.size() );
       framebuffer.pAttachments    = attachments.data();
       framebuffer.width           = m_Extent.width;
@@ -245,7 +245,7 @@ namespace Engine::Renderer
 
       try
       {
-        m_Framebuffers.emplace_back(
+        m_pFramebuffers.emplace_back(
           m_Device.Get().createFramebuffer( framebuffer ) );
       }
       catch ( const vk::SystemError & E )
@@ -259,9 +259,9 @@ namespace Engine::Renderer
     const vk::raii::PhysicalDevice & device ) const
   {
     SwapChainSupportDetails details = {};
-    details.m_Capabilities = device.getSurfaceCapabilitiesKHR( *m_Surface );
-    details.m_Formats      = device.getSurfaceFormatsKHR( *m_Surface );
-    details.m_PresentModes = device.getSurfacePresentModesKHR( *m_Surface );
+    details.m_Capabilities = device.getSurfaceCapabilitiesKHR( *m_pSurface );
+    details.m_Formats      = device.getSurfaceFormatsKHR( *m_pSurface );
+    details.m_PresentModes = device.getSurfacePresentModesKHR( *m_pSurface );
 
     return details;
   }

@@ -50,10 +50,10 @@ namespace Engine::Renderer
                              const vk::raii::SurfaceKHR & surface );
     void CreateLogicalDevice( const vk::raii::SurfaceKHR & surface );
 
-    vk::raii::PhysicalDevice m_PhysicalDevice;
-    vk::raii::Device         m_Device;
-    vk::raii::Queue          m_GraphicsQueue;
-    vk::raii::Queue          m_PresentQueue;
+    vk::raii::PhysicalDevice m_pPhysicalDevice;
+    vk::raii::Device         m_pDevice;
+    vk::raii::Queue          m_pGraphicsQueue;
+    vk::raii::Queue          m_pPresentQueue;
     QueueFamilyIndices       m_QueueFamilyIndices;
 
     static const std::vector<const char *> s_Extensions;

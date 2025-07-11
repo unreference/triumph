@@ -56,24 +56,24 @@ namespace Engine::Renderer
     static VKAPI_ATTR vk::Bool32 VKAPI_CALL
     DebugCallback( vk::DebugUtilsMessageSeverityFlagBitsEXT       severity,
                    vk::DebugUtilsMessageTypeFlagsEXT              type,
-                   const vk::DebugUtilsMessengerCallbackDataEXT * pCallbackData,
-                   void *                                         pUserData );
+                   const vk::DebugUtilsMessengerCallbackDataEXT * callbackData,
+                   void *                                         userData );
 
     Platform::Window &   m_Window;
-    vk::raii::Context    m_Context;
-    vk::raii::Instance   m_Instance;
-    vk::raii::SurfaceKHR m_Surface;
+    vk::raii::Context    m_pContext;
+    vk::raii::Instance   m_pInstance;
+    vk::raii::SurfaceKHR m_pSurface;
 
-    std::unique_ptr<Device>    m_Device;
-    std::unique_ptr<SwapChain> m_SwapChain;
+    std::unique_ptr<Device>    m_pDevice;
+    std::unique_ptr<SwapChain> m_pSwapChain;
 
-    vk::raii::CommandPool                m_CommandPool;
+    vk::raii::CommandPool                m_pCommandPool;
     std::vector<vk::raii::CommandBuffer> m_CommandBuffers;
 
-    std::vector<vk::raii::Semaphore> m_ImageSemaphores;
-    std::vector<vk::raii::Semaphore> m_RenderSemaphores;
-    std::vector<vk::raii::Fence>     m_FencesInFlight;
-    std::vector<vk::raii::Fence *>   m_ImagesInFlight;
+    std::vector<vk::raii::Semaphore> m_pImageSemaphores;
+    std::vector<vk::raii::Semaphore> m_pRenderSemaphores;
+    std::vector<vk::raii::Fence>     m_pFencesInFlight;
+    std::vector<vk::raii::Fence *>   m_pImagesInFlight;
 
     u32  m_CurrentFrame;
     u32  m_ImageIndex;
@@ -82,9 +82,9 @@ namespace Engine::Renderer
 
     vk::ClearColorValue m_ClearColor;
 
-    vk::raii::DebugUtilsMessengerEXT m_DebugMessenger;
+    vk::raii::DebugUtilsMessengerEXT m_pDebugMessenger;
 
-    static constexpr u32                   s_MaxFramesInFlight        = 2;
+    static constexpr u32                   s_MaxFramesInFlight        = 3;
     static constexpr bool                  s_IsValidationLayerEnabled = true;
     static const std::vector<const char *> s_ValidationLayers;
   };

@@ -12,10 +12,10 @@ namespace Engine::Renderer
 
   Device::Device( const vk::raii::Instance &   instance,
                   const vk::raii::SurfaceKHR & surface )
-    : m_PhysicalDevice( nullptr )
-    , m_Device( nullptr )
-    , m_GraphicsQueue( nullptr )
-    , m_PresentQueue( nullptr )
+    : m_pPhysicalDevice( nullptr )
+    , m_pDevice( nullptr )
+    , m_pGraphicsQueue( nullptr )
+    , m_pPresentQueue( nullptr )
   {
     PickPhysicalDevice( instance, surface );
     CreateLogicalDevice( surface );
@@ -23,22 +23,22 @@ namespace Engine::Renderer
 
   const vk::raii::Device & Device::Get() const
   {
-    return m_Device;
+    return m_pDevice;
   }
 
   const vk::raii::PhysicalDevice & Device::GetPhysicalDevice() const
   {
-    return m_PhysicalDevice;
+    return m_pPhysicalDevice;
   }
 
   const vk::raii::Queue & Device::GetGraphicsQueue() const
   {
-    return m_GraphicsQueue;
+    return m_pGraphicsQueue;
   }
 
   const vk::raii::Queue & Device::GetPresentQueue() const
   {
-    return m_PresentQueue;
+    return m_pPresentQueue;
   }
 
   const Device::QueueFamilyIndices & Device::GetQueueFamilyIndices() const
@@ -48,7 +48,7 @@ namespace Engine::Renderer
 
   void Device::Wait() const
   {
-    m_Device.waitIdle();
+    m_pDevice.waitIdle();
   }
 
   void Device::PickPhysicalDevice( const vk::raii::Instance &   instance,
@@ -65,24 +65,24 @@ namespace Engine::Renderer
     {
       if ( IsDeviceSuitable( Device, surface ) )
       {
-        m_PhysicalDevice =
+        m_pPhysicalDevice =
           std::move( const_cast<vk::raii::PhysicalDevice &>( Device ) );
         break;
       }
     }
 
-    if ( !*m_PhysicalDevice )
+    if ( !*m_pPhysicalDevice )
     {
       LOG_FATAL( "Failed to find a suitable GPU with Vulkan support!" );
     }
 
-    const auto Properties = m_PhysicalDevice.getProperties();
+    const auto Properties = m_pPhysicalDevice.getProperties();
     LOG_INFO( "Selected GPU: {}", Properties.deviceName.data() );
   }
 
   void Device::CreateLogicalDevice( const vk::raii::SurfaceKHR & surface )
   {
-    m_QueueFamilyIndices = GetQueueFamilies( m_PhysicalDevice, surface );
+    m_QueueFamilyIndices = GetQueueFamilies( m_pPhysicalDevice, surface );
 
     std::vector<vk::DeviceQueueCreateInfo> queueInfos;
     const std::set<u32>                    UniqueFamilies = {
@@ -111,17 +111,17 @@ namespace Engine::Renderer
 
     try
     {
-      m_Device = m_PhysicalDevice.createDevice( device );
+      m_pDevice = m_pPhysicalDevice.createDevice( device );
     }
     catch ( const vk::SystemError & E )
     {
       LOG_FATAL( "Failed to create logical device: {}", E.what() );
     }
 
-    m_GraphicsQueue =
-      m_Device.getQueue( m_QueueFamilyIndices.m_GraphicsFamily.value(), 0 );
-    m_PresentQueue =
-      m_Device.getQueue( m_QueueFamilyIndices.m_PresentFamily.value(), 0 );
+    m_pGraphicsQueue =
+      m_pDevice.getQueue( m_QueueFamilyIndices.m_GraphicsFamily.value(), 0 );
+    m_pPresentQueue =
+      m_pDevice.getQueue( m_QueueFamilyIndices.m_PresentFamily.value(), 0 );
   }
 
   Device::QueueFamilyIndices
