@@ -32,14 +32,13 @@ if (WIN32)
     list(APPEND ENGINE_HEADERS
             Include/Engine/Platform/Win32/Win32Window.hpp
     )
-    #elseif ( UNIX )
-    #  list( APPEND ENGINE_SOURCES
-    #    Source/Engine/Platform/Unix/UnixWindow.cpp
-    #  )
-    #  list( APPEND ENGINE_HEADERS
-    #    Include/Engine/Platform/Unix/UnixWindow.hpp
-    #  )
-    # 
+    #elseif (LINUX)
+    #    list(APPEND ENGINE_SOURCES
+    #            Source/Engine/Platform/Linux/LinuxWindow.cpp
+    #    )
+    #    list(APPEND ENGINE_HEADERS
+    #            Include/Engine/Platform/Linux/LinuxWindow.hpp
+    #    )
 endif ()
 
 add_library(Engine STATIC ${ENGINE_SOURCES} ${ENGINE_HEADERS})
@@ -54,7 +53,7 @@ if (WIN32)
             gdi32.lib
             shell32.lib
     )
-elseif (UNIX)
+elseif (LINUX)
     find_package(X11 REQUIRED)
     target_link_libraries(Engine PRIVATE
             ${X11_LIBRARIES}

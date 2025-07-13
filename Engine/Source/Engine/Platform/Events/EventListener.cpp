@@ -4,15 +4,15 @@
 
 namespace Engine::Platform::Events
 {
-  EventListener::EventListener( Window &              window,
-                                Window::EventCallback callback )
-    : m_Window( &window )
+  EventListener::EventListener( Window & window, Window::EventCallback callback )
+    : m_pWindow( &window )
+    , m_Id( 0 )
   {
-    m_Id = m_Window->AddEventListener( std::move( callback ) );
+    m_Id = m_pWindow->AddEventListener( std::move( callback ) );
     if ( m_Id == 0 )
     {
       LOG_FATAL( "Failed to add event listener!" );
-      m_Window = nullptr;
+      m_pWindow = nullptr;
     }
   }
 
@@ -22,11 +22,11 @@ namespace Engine::Platform::Events
   }
 
   EventListener::EventListener( EventListener && other ) noexcept
-    : m_Window( other.m_Window )
+    : m_pWindow( other.m_pWindow )
     , m_Id( other.m_Id )
   {
-    other.m_Window = nullptr;
-    other.m_Id     = 0;
+    other.m_pWindow = nullptr;
+    other.m_Id      = 0;
   }
 
   EventListener & EventListener::operator=( EventListener && other ) noexcept
@@ -35,10 +35,10 @@ namespace Engine::Platform::Events
     {
       Remove();
 
-      m_Window       = other.m_Window;
-      m_Id           = other.m_Id;
-      other.m_Window = nullptr;
-      other.m_Id     = 0;
+      m_pWindow       = other.m_pWindow;
+      m_Id            = other.m_Id;
+      other.m_pWindow = nullptr;
+      other.m_Id      = 0;
     }
 
     return *this;
@@ -46,16 +46,16 @@ namespace Engine::Platform::Events
 
   bool EventListener::IsValid() const
   {
-    return m_Window != nullptr && m_Id != 0;
+    return m_pWindow != nullptr && m_Id != 0;
   }
 
   void EventListener::Remove()
   {
-    if ( m_Window && m_Id != 0 )
+    if ( m_pWindow && m_Id != 0 )
     {
-      m_Window->RemoveEventListener( m_Id );
-      m_Window = nullptr;
-      m_Id     = 0;
+      m_pWindow->RemoveEventListener( m_Id );
+      m_pWindow = nullptr;
+      m_Id      = 0;
     }
   }
 } // namespace Engine::Platform::Events

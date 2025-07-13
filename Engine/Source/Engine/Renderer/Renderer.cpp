@@ -1,3 +1,15 @@
+/*--------------------------------------------------------------------------------*
+  Copyright Nintendo.  All rights reserved.
+
+  These coded instructions, statements, and computer programs contain proprietary
+  information of Nintendo and/or its licensed developers and are protected by
+  national and international copyright laws. They may not be disclosed to third
+  parties or copied or duplicated in any form, in whole or in part, without the
+  prior written consent of Nintendo.
+
+  The content herein is highly confidential and should be handled accordingly.
+ *--------------------------------------------------------------------------------*/
+
 #include "Engine/Renderer/Device.hpp"
 #include "Engine/Renderer/SwapChain.hpp"
 #include "Engine/Platform/Window.hpp"
@@ -58,9 +70,9 @@ namespace Engine::Renderer
       return;
     }
 
-    const auto Wait = m_pDevice->Get().waitForFences(
-      { *m_pFencesInFlight.at( m_CurrentFrame ) }, vk::True,
-      std::numeric_limits<u64>::max() );
+    const auto Wait =
+      m_pDevice->Get().waitForFences( { *m_pFencesInFlight[ m_CurrentFrame ] },
+                                      vk::True, std::numeric_limits<u64>::max() );
 
     if ( Wait != vk::Result::eSuccess )
     {
@@ -68,24 +80,22 @@ namespace Engine::Renderer
       return;
     }
 
-    const auto Acquired = m_pSwapChain->Get().acquireNextImage(
-      std::numeric_limits<u64>::max(),
-      *m_pImageSemaphores.at( m_CurrentFrame ) );
+    const auto [ First, Second ] = m_pSwapChain->Get().acquireNextImage(
+      std::numeric_limits<u64>::max(), *m_pImageSemaphores[ m_CurrentFrame ] );
 
-    if ( Acquired.first == vk::Result::eErrorOutOfDateKHR )
+    if ( First == vk::Result::eErrorOutOfDateKHR )
     {
       RecreateSwapChain();
       return;
     }
 
-    if ( Acquired.first != vk::Result::eSuccess &&
-         Acquired.first != vk::Result::eSuboptimalKHR )
+    if ( First != vk::Result::eSuccess && First != vk::Result::eSuboptimalKHR )
     {
       LOG_FATAL( "Failed to acquire swap chain image!" );
       return;
     }
 
-    m_ImageIndex = Acquired.second;
+    m_ImageIndex = Second;
 
     if ( m_ImageIndex >= m_pImagesInFlight.size() )
     {
@@ -94,32 +104,31 @@ namespace Engine::Renderer
       return;
     }
 
-    if ( m_pImagesInFlight.at( m_ImageIndex ) != nullptr )
+    if ( m_pImagesInFlight[ m_ImageIndex ] != nullptr )
     {
-      const vk::Result waitResult = m_pDevice->Get().waitForFences(
-        { **m_pImagesInFlight.at( m_ImageIndex ) }, vk::True,
-        std::numeric_limits<u64>::max() );
+      const auto WaitResult =
+        m_pDevice->Get().waitForFences( { **m_pImagesInFlight[ m_ImageIndex ] },
+                                        vk::True, std::numeric_limits<u64>::max() );
 
-      if ( waitResult != vk::Result::eSuccess )
+      if ( WaitResult != vk::Result::eSuccess )
       {
         LOG_ERROR( "Failed to wait for image fence!" );
         return;
       }
     }
 
-    m_pImagesInFlight.at( m_ImageIndex ) =
-      &m_pFencesInFlight.at( m_CurrentFrame );
+    m_pImagesInFlight[ m_ImageIndex ] = &m_pFencesInFlight[ m_CurrentFrame ];
 
-    m_pDevice->Get().resetFences( { *m_pFencesInFlight.at( m_CurrentFrame ) } );
+    m_pDevice->Get().resetFences( { *m_pFencesInFlight[ m_CurrentFrame ] } );
 
-    m_CommandBuffers.at( m_CurrentFrame ).reset();
+    m_CommandBuffers[ m_CurrentFrame ].reset();
 
     constexpr vk::CommandBufferBeginInfo CommandBuffer = {};
-    m_CommandBuffers.at( m_CurrentFrame ).begin( CommandBuffer );
+    m_CommandBuffers[ m_CurrentFrame ].begin( CommandBuffer );
 
     vk::RenderPassBeginInfo renderPass = {};
     renderPass.renderPass              = m_pSwapChain->GetRenderPass();
-    renderPass.framebuffer = m_pSwapChain->GetFramebuffers().at( m_ImageIndex );
+    renderPass.framebuffer       = m_pSwapChain->GetFramebuffers()[ m_ImageIndex ];
     renderPass.renderArea.offset = vk::Offset2D { 0, 0 };
     renderPass.renderArea.extent = m_pSwapChain->GetExtent();
 
@@ -128,8 +137,8 @@ namespace Engine::Renderer
     renderPass.clearValueCount = 1;
     renderPass.pClearValues    = &clear;
 
-    m_CommandBuffers.at( m_CurrentFrame )
-      .beginRenderPass( renderPass, vk::SubpassContents::eInline );
+    m_CommandBuffers[ m_CurrentFrame ].beginRenderPass(
+      renderPass, vk::SubpassContents::eInline );
 
     m_IsFrameStarted = true;
   }
@@ -142,32 +151,32 @@ namespace Engine::Renderer
       return;
     }
 
-    m_CommandBuffers.at( m_CurrentFrame ).endRenderPass();
-    m_CommandBuffers.at( m_CurrentFrame ).end();
+    m_CommandBuffers[ m_CurrentFrame ].endRenderPass();
+    m_CommandBuffers[ m_CurrentFrame ].end();
 
-    const vk::Semaphore waits[] = { *m_pImageSemaphores.at( m_CurrentFrame ) };
+    const vk::Semaphore Waits[] = { *m_pImageSemaphores[ m_CurrentFrame ] };
     constexpr vk::PipelineStageFlags Stages[] = {
       vk::PipelineStageFlagBits::eColorAttachmentOutput };
 
-    vk::SubmitInfo submission {};
+    vk::SubmitInfo submission       = {};
     submission.waitSemaphoreCount   = 1;
-    submission.pWaitSemaphores      = waits;
+    submission.pWaitSemaphores      = Waits;
     submission.pWaitDstStageMask    = Stages;
     submission.commandBufferCount   = 1;
-    submission.pCommandBuffers      = &*m_CommandBuffers.at( m_CurrentFrame );
-    submission.pSignalSemaphores    = &*m_pRenderSemaphores.at( m_ImageIndex );
+    submission.pCommandBuffers      = &*m_CommandBuffers[ m_CurrentFrame ];
+    submission.pSignalSemaphores    = &*m_pRenderSemaphores[ m_ImageIndex ];
     submission.signalSemaphoreCount = 1;
 
-    m_pDevice->GetGraphicsQueue().submit(
-      submission, *m_pFencesInFlight.at( m_CurrentFrame ) );
+    m_pDevice->GetGraphicsQueue().submit( submission,
+                                          *m_pFencesInFlight[ m_CurrentFrame ] );
 
     vk::PresentInfoKHR present = {};
-    present.pWaitSemaphores    = &*m_pRenderSemaphores.at( m_ImageIndex );
+    present.pWaitSemaphores    = &*m_pRenderSemaphores[ m_ImageIndex ];
     present.waitSemaphoreCount = 1;
 
-    const vk::SwapchainKHR swapChains[] = { *m_pSwapChain->Get() };
+    const vk::SwapchainKHR SwapChains[] = { *m_pSwapChain->Get() };
     present.swapchainCount              = 1;
-    present.pSwapchains                 = swapChains;
+    present.pSwapchains                 = SwapChains;
     present.pImageIndices               = &m_ImageIndex;
 
     if ( const auto Result = m_pDevice->GetPresentQueue().presentKHR( present );
@@ -192,7 +201,7 @@ namespace Engine::Renderer
     m_ClearColor = { r, g, b, a };
   }
 
-  void Renderer::Resize( u32 width, u32 height )
+  void Renderer::Resize( u32, u32 )
   {
     m_IsFramebufferResized = true;
   }
@@ -226,18 +235,16 @@ namespace Engine::Renderer
     vk::DebugUtilsMessengerCreateInfoEXT messenger = {};
     if ( s_IsValidationLayerEnabled )
     {
-      instance.enabledLayerCount =
-        static_cast<u32>( s_ValidationLayers.size() );
+      instance.enabledLayerCount   = static_cast<u32>( s_ValidationLayers.size() );
       instance.ppEnabledLayerNames = s_ValidationLayers.data();
 
       messenger.messageSeverity =
         vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
         vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
         vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
-      messenger.messageType =
-        vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
-        vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
-        vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
+      messenger.messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+                              vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
+                              vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
       messenger.pfnUserCallback = DebugCallback;
 
       instance.pNext = &messenger;
@@ -267,16 +274,14 @@ namespace Engine::Renderer
         vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
         vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
         vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
-      messenger.messageType =
-        vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
-        vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
-        vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
+      messenger.messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+                              vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
+                              vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
       messenger.pfnUserCallback = DebugCallback;
 
       try
       {
-        m_pDebugMessenger =
-          m_pInstance.createDebugUtilsMessengerEXT( messenger );
+        m_pDebugMessenger = m_pInstance.createDebugUtilsMessengerEXT( messenger );
       }
       catch ( const vk::SystemError & E )
       {
@@ -287,24 +292,23 @@ namespace Engine::Renderer
 
   void Renderer::CreateSurface()
   {
-    auto result = m_Window.CreateSurface( *m_pInstance );
-    if ( !result )
+    const auto Result = m_Window.CreateSurface( *m_pInstance );
+    if ( !Result )
     {
-      LOG_ERROR( "Failed to create surface: {}", result.GetError() );
+      LOG_ERROR( "Failed to create surface: {}", Result.GetError() );
       return;
     }
 
-    m_pSurface = vk::raii::SurfaceKHR( m_pInstance, result.GetValue() );
+    m_pSurface = vk::raii::SurfaceKHR( m_pInstance, Result.GetValue() );
   }
 
   void Renderer::CreateCommandPool()
   {
-    const auto & [ graphicsFamily, presentFamily ] =
-      m_pDevice->GetQueueFamilyIndices();
+    const auto & [ Graphics, Present ] = m_pDevice->GetQueueFamilyIndices();
 
     vk::CommandPoolCreateInfo commandPool = {};
     commandPool.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
-    commandPool.queueFamilyIndex = graphicsFamily.value();
+    commandPool.queueFamilyIndex = Graphics.value();
 
     try
     {
@@ -323,14 +327,14 @@ namespace Engine::Renderer
 
     vk::CommandBufferAllocateInfo commandBuffer = {};
     commandBuffer.commandPool                   = *m_pCommandPool;
-    commandBuffer.level              = vk::CommandBufferLevel::ePrimary;
-    commandBuffer.commandBufferCount = s_MaxFramesInFlight;
+    commandBuffer.level                         = vk::CommandBufferLevel::ePrimary;
+    commandBuffer.commandBufferCount            = s_MaxFramesInFlight;
 
     try
     {
-      auto commandBuffers =
-        m_pDevice->Get().allocateCommandBuffers( commandBuffer );
-      for ( auto && buffer : commandBuffers )
+      for ( auto commandBuffers =
+              m_pDevice->Get().allocateCommandBuffers( commandBuffer );
+            auto && buffer : commandBuffers )
       {
         m_CommandBuffers.emplace_back( std::move( buffer ) );
       }
@@ -343,7 +347,7 @@ namespace Engine::Renderer
 
   void Renderer::CreateSyncObjects()
   {
-    const std::size_t ImageCount = m_pSwapChain->GetImageCount();
+    const auto ImageCount = m_pSwapChain->GetImageCount();
 
     m_pImageSemaphores.clear();
     m_pRenderSemaphores.clear();
@@ -364,8 +368,7 @@ namespace Engine::Renderer
     fence.flags               = vk::FenceCreateFlagBits::eSignaled;
 
     constexpr vk::SemaphoreCreateInfo Semaphore = {};
-
-    for ( std::size_t i = 0; i < s_MaxFramesInFlight; ++i )
+    for ( auto i = 0; i < s_MaxFramesInFlight; ++i )
     {
       try
       {
@@ -379,7 +382,7 @@ namespace Engine::Renderer
       }
     }
 
-    for ( std::size_t i = 0; i < ImageCount; ++i )
+    for ( auto i = 0; i < ImageCount; ++i )
     {
       try
       {
@@ -395,8 +398,8 @@ namespace Engine::Renderer
 
   void Renderer::RecreateSwapChain() const
   {
-    u32 width  = m_Window.GetWidth();
-    u32 height = m_Window.GetHeight();
+    auto width  = m_Window.GetWidth();
+    auto height = m_Window.GetHeight();
 
     while ( width == 0 || height == 0 )
     {
@@ -413,7 +416,7 @@ namespace Engine::Renderer
   {
     const auto Available = vk::enumerateInstanceLayerProperties();
 
-    for ( const char * Name : s_ValidationLayers )
+    for ( const auto Name : s_ValidationLayers )
     {
       bool isFound = false;
 
@@ -448,10 +451,9 @@ namespace Engine::Renderer
   }
 
   VKAPI_ATTR VKAPI_ATTR vk::Bool32 Renderer::DebugCallback(
-    vk::DebugUtilsMessageSeverityFlagBitsEXT       severity,
-    vk::DebugUtilsMessageTypeFlagsEXT              type,
-    const vk::DebugUtilsMessengerCallbackDataEXT * callbackData,
-    void *                                         userData )
+    const vk::DebugUtilsMessageSeverityFlagBitsEXT severity,
+    vk::DebugUtilsMessageTypeFlagsEXT,
+    const vk::DebugUtilsMessengerCallbackDataEXT * callbackData, void * )
   {
     if ( severity >= vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning )
     {

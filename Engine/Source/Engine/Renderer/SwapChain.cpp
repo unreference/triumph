@@ -1,3 +1,15 @@
+/*--------------------------------------------------------------------------------*
+  Copyright Nintendo.  All rights reserved.
+
+  These coded instructions, statements, and computer programs contain proprietary
+  information of Nintendo and/or its licensed developers and are protected by
+  national and international copyright laws. They may not be disclosed to third
+  parties or copied or duplicated in any form, in whole or in part, without the
+  prior written consent of Nintendo.
+
+  The content herein is highly confidential and should be handled accordingly.
+ *--------------------------------------------------------------------------------*/
+
 #include "Engine/Renderer/Device.hpp"
 #include "Engine/Utility/Logger.hpp"
 
@@ -5,9 +17,8 @@
 
 namespace Engine::Renderer
 {
-  SwapChain::SwapChain( const Device &               device,
-                        const vk::raii::SurfaceKHR & surface, const u32 width,
-                        const u32 height )
+  SwapChain::SwapChain( const Device & device, const vk::raii::SurfaceKHR & surface,
+                        const u32 width, const u32 height )
     : m_Device( device )
     , m_pSurface( surface )
     , m_Width( width )
@@ -87,13 +98,12 @@ namespace Engine::Renderer
     auto [ capabilities, formats, presentModes ] =
       QuerySwapChainSupport( m_Device.GetPhysicalDevice() );
 
-    const vk::SurfaceFormatKHR Surface     = ChooseSurfaceFormat( formats );
-    const vk::PresentModeKHR   PresentMode = ChoosePresentMode( presentModes );
-    const vk::Extent2D         Extent      = ChooseExtent( capabilities );
+    const auto Surface     = ChooseSurfaceFormat( formats );
+    const auto PresentMode = ChoosePresentMode( presentModes );
+    const auto Extent      = ChooseExtent( capabilities );
 
-    u32 imageCount = capabilities.minImageCount + 1;
-    if ( capabilities.maxImageCount > 0 &&
-         imageCount > capabilities.maxImageCount )
+    auto imageCount = capabilities.minImageCount + 1;
+    if ( capabilities.maxImageCount > 0 && imageCount > capabilities.maxImageCount )
     {
       imageCount = capabilities.maxImageCount;
     }
@@ -105,17 +115,16 @@ namespace Engine::Renderer
     swapChain.imageColorSpace            = Surface.colorSpace;
     swapChain.imageExtent                = Extent;
     swapChain.imageArrayLayers           = 1;
-    swapChain.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
+    swapChain.imageUsage                 = vk::ImageUsageFlagBits::eColorAttachment;
 
-    const auto & [ graphicsFamily, presentFamily ] =
-      m_Device.GetQueueFamilyIndices();
-    const u32 Indices[] = { graphicsFamily.value(), presentFamily.value() };
+    const auto & [ Graphics, Present ] = m_Device.GetQueueFamilyIndices();
+    const std::array Indices           = { Graphics.value(), Present.value() };
 
-    if ( graphicsFamily != presentFamily )
+    if ( Graphics != Present )
     {
       swapChain.imageSharingMode      = vk::SharingMode::eConcurrent;
       swapChain.queueFamilyIndexCount = 2;
-      swapChain.pQueueFamilyIndices   = Indices;
+      swapChain.pQueueFamilyIndices   = Indices.data();
     }
     else
     {
@@ -153,24 +162,23 @@ namespace Engine::Renderer
 
     for ( const auto & Image : m_Images )
     {
-      vk::ImageViewCreateInfo imageView       = {};
-      imageView.image                         = Image;
-      imageView.viewType                      = vk::ImageViewType::e2D;
-      imageView.format                        = m_ImageFormat;
-      imageView.components.r                  = vk::ComponentSwizzle::eIdentity;
-      imageView.components.g                  = vk::ComponentSwizzle::eIdentity;
-      imageView.components.b                  = vk::ComponentSwizzle::eIdentity;
-      imageView.components.a                  = vk::ComponentSwizzle::eIdentity;
-      imageView.subresourceRange.aspectMask   = vk::ImageAspectFlagBits::eColor;
-      imageView.subresourceRange.baseMipLevel = 0;
-      imageView.subresourceRange.levelCount   = 1;
+      vk::ImageViewCreateInfo imageView         = {};
+      imageView.image                           = Image;
+      imageView.viewType                        = vk::ImageViewType::e2D;
+      imageView.format                          = m_ImageFormat;
+      imageView.components.r                    = vk::ComponentSwizzle::eIdentity;
+      imageView.components.g                    = vk::ComponentSwizzle::eIdentity;
+      imageView.components.b                    = vk::ComponentSwizzle::eIdentity;
+      imageView.components.a                    = vk::ComponentSwizzle::eIdentity;
+      imageView.subresourceRange.aspectMask     = vk::ImageAspectFlagBits::eColor;
+      imageView.subresourceRange.baseMipLevel   = 0;
+      imageView.subresourceRange.levelCount     = 1;
       imageView.subresourceRange.baseArrayLayer = 0;
       imageView.subresourceRange.layerCount     = 1;
 
       try
       {
-        m_pImageViews.emplace_back(
-          m_Device.Get().createImageView( imageView ) );
+        m_pImageViews.emplace_back( m_Device.Get().createImageView( imageView ) );
       }
       catch ( const vk::SystemError & E )
       {
@@ -203,9 +211,9 @@ namespace Engine::Renderer
     vk::SubpassDependency dependency = {};
     dependency.srcSubpass            = vk::SubpassExternal;
     dependency.dstSubpass            = 0;
-    dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+    dependency.srcStageMask  = vk::PipelineStageFlagBits::eColorAttachmentOutput;
     dependency.srcAccessMask = vk::AccessFlagBits::eNone;
-    dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+    dependency.dstStageMask  = vk::PipelineStageFlagBits::eColorAttachmentOutput;
     dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
 
     vk::RenderPassCreateInfo renderPass = {};
@@ -233,15 +241,15 @@ namespace Engine::Renderer
 
     for ( const auto & ImageView : m_pImageViews )
     {
-      std::array attachments = { *ImageView };
+      const std::array Attachments = { *ImageView };
 
       vk::FramebufferCreateInfo framebuffer = {};
       framebuffer.renderPass                = *m_pRenderPass;
-      framebuffer.attachmentCount = static_cast<u32>( attachments.size() );
-      framebuffer.pAttachments    = attachments.data();
-      framebuffer.width           = m_Extent.width;
-      framebuffer.height          = m_Extent.height;
-      framebuffer.layers          = 1;
+      framebuffer.attachmentCount           = static_cast<u32>( Attachments.size() );
+      framebuffer.pAttachments              = Attachments.data();
+      framebuffer.width                     = m_Extent.width;
+      framebuffer.height                    = m_Extent.height;
+      framebuffer.layers                    = 1;
 
       try
       {
@@ -255,14 +263,13 @@ namespace Engine::Renderer
     }
   }
 
-  SwapChain::SwapChainSupportDetails SwapChain::QuerySwapChainSupport(
-    const vk::raii::PhysicalDevice & device ) const
+  SwapChain::SwapChainSupportDetails
+  SwapChain::QuerySwapChainSupport( const vk::raii::PhysicalDevice & device ) const
   {
     SwapChainSupportDetails details = {};
     details.m_Capabilities = device.getSurfaceCapabilitiesKHR( *m_pSurface );
     details.m_Formats      = device.getSurfaceFormatsKHR( *m_pSurface );
     details.m_PresentModes = device.getSurfacePresentModesKHR( *m_pSurface );
-
     return details;
   }
 
@@ -292,7 +299,7 @@ namespace Engine::Renderer
       }
     }
 
-    return availableFormats.at( 0 );
+    return availableFormats[ 0 ];
   }
 
   vk::PresentModeKHR SwapChain::ChoosePresentMode(
@@ -309,8 +316,8 @@ namespace Engine::Renderer
     return vk::PresentModeKHR::eFifo;
   }
 
-  vk::Extent2D SwapChain::ChooseExtent(
-    const vk::SurfaceCapabilitiesKHR & capabilities ) const
+  vk::Extent2D
+  SwapChain::ChooseExtent( const vk::SurfaceCapabilitiesKHR & capabilities ) const
   {
     if ( capabilities.currentExtent.width != std::numeric_limits<u32>::max() )
     {
@@ -318,11 +325,10 @@ namespace Engine::Renderer
     }
 
     vk::Extent2D actual = { m_Width, m_Height };
-    actual.width = std::clamp( actual.width, capabilities.minImageExtent.width,
-                               capabilities.maxImageExtent.width );
-    actual.height =
-      std::clamp( actual.height, capabilities.minImageExtent.height,
-                  capabilities.maxImageExtent.height );
+    actual.width  = std::clamp( actual.width, capabilities.minImageExtent.width,
+                                capabilities.maxImageExtent.width );
+    actual.height = std::clamp( actual.height, capabilities.minImageExtent.height,
+                                capabilities.maxImageExtent.height );
 
     return actual;
   }

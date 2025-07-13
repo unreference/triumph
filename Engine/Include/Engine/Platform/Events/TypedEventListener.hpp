@@ -1,3 +1,15 @@
+/*--------------------------------------------------------------------------------*
+  Copyright Nintendo.  All rights reserved.
+
+  These coded instructions, statements, and computer programs contain proprietary
+  information of Nintendo and/or its licensed developers and are protected by
+  national and international copyright laws. They may not be disclosed to third
+  parties or copied or duplicated in any form, in whole or in part, without the
+  prior written consent of Nintendo.
+
+  The content herein is highly confidential and should be handled accordingly.
+ *--------------------------------------------------------------------------------*/
+
 #pragma once
 
 #include <functional>
@@ -47,18 +59,16 @@ namespace Engine::Platform::Events
     EventListener m_Listener;
   };
 
-  using WindowCloseListener     = TypedEventListener<WindowCloseEvent>;
-  using WindowResizeListener    = TypedEventListener<WindowResizeEvent>;
-  using WindowSetFocusListener  = TypedEventListener<WindowSetFocusEvent>;
-  using WindowKillFocusListener = TypedEventListener<WindowKillFocusEvent>;
-  using WindowMovedListener     = TypedEventListener<WindowMovedEvent>;
-  using KeyPressedListener      = TypedEventListener<KeyPressedEvent>;
-  using KeyReleasedListener     = TypedEventListener<KeyReleasedEvent>;
-  using KeyTypedListener        = TypedEventListener<KeyTypedEvent>;
-  using MouseButtonPressedListener =
-    TypedEventListener<MouseButtonPressedEvent>;
-  using MouseButtonReleasedListener =
-    TypedEventListener<MouseButtonReleasedEvent>;
-  using MouseMovedListener    = TypedEventListener<MouseMovedEvent>;
-  using MouseScrolledListener = TypedEventListener<MouseScrolledEvent>;
+  using WindowCloseListener         = TypedEventListener<WindowCloseEvent>;
+  using WindowResizeListener        = TypedEventListener<WindowResizeEvent>;
+  using WindowSetFocusListener      = TypedEventListener<WindowSetFocusEvent>;
+  using WindowKillFocusListener     = TypedEventListener<WindowKillFocusEvent>;
+  using WindowMovedListener         = TypedEventListener<WindowMovedEvent>;
+  using KeyPressedListener          = TypedEventListener<KeyPressedEvent>;
+  using KeyReleasedListener         = TypedEventListener<KeyReleasedEvent>;
+  using KeyTypedListener            = TypedEventListener<KeyTypedEvent>;
+  using MouseButtonPressedListener  = TypedEventListener<MouseButtonPressedEvent>;
+  using MouseButtonReleasedListener = TypedEventListener<MouseButtonReleasedEvent>;
+  using MouseMovedListener          = TypedEventListener<MouseMovedEvent>;
+  using MouseScrolledListener       = TypedEventListener<MouseScrolledEvent>;
 } // namespace Engine::Platform::Events

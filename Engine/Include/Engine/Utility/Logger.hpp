@@ -1,3 +1,15 @@
+/*--------------------------------------------------------------------------------*
+  Copyright Nintendo.  All rights reserved.
+
+  These coded instructions, statements, and computer programs contain proprietary
+  information of Nintendo and/or its licensed developers and are protected by
+  national and international copyright laws. They may not be disclosed to third
+  parties or copied or duplicated in any form, in whole or in part, without the
+  prior written consent of Nintendo.
+
+  The content herein is highly confidential and should be handled accordingly.
+ *--------------------------------------------------------------------------------*/
+
 #pragma once
 
 #include <format>
@@ -43,9 +55,8 @@ namespace Engine::Utility
     static void Log( const LogMetadata & metadata, const LogMessage & message );
 
     template <typename... Args>
-    static void Log( const std::source_location & loc,
-                     const LogSeverity severity, std::string_view fmt,
-                     Args &&... args )
+    static void Log( const std::source_location & loc, const LogSeverity severity,
+                     std::string_view fmt, Args &&... args )
     {
       if ( severity < s_LogSeverity )
       {
@@ -90,36 +101,36 @@ namespace Engine::Utility
     }
 
     template <typename... Args>
-    static void TraceImpl( const std::source_location & loc,
-                           std::string_view             fmt, Args &&... args )
+    static void TraceImpl( const std::source_location & loc, std::string_view fmt,
+                           Args &&... args )
     {
       Log( loc, LogSeverity::m_Trace, fmt, std::forward<Args>( args )... );
     }
 
     template <typename... Args>
-    static void InfoImpl( const std::source_location & loc,
-                          std::string_view             fmt, Args &&... args )
+    static void InfoImpl( const std::source_location & loc, std::string_view fmt,
+                          Args &&... args )
     {
       Log( loc, LogSeverity::m_Info, fmt, std::forward<Args>( args )... );
     }
 
     template <typename... Args>
-    static void WarnImpl( const std::source_location & loc,
-                          std::string_view             fmt, Args &&... args )
+    static void WarnImpl( const std::source_location & loc, std::string_view fmt,
+                          Args &&... args )
     {
       Log( loc, LogSeverity::m_Warn, fmt, std::forward<Args>( args )... );
     }
 
     template <typename... Args>
-    static void ErrorImpl( const std::source_location & loc,
-                           std::string_view             fmt, Args &&... args )
+    static void ErrorImpl( const std::source_location & loc, std::string_view fmt,
+                           Args &&... args )
     {
       Log( loc, LogSeverity::m_Error, fmt, std::forward<Args>( args )... );
     }
 
     template <typename... Args>
-    static void FatalImpl( const std::source_location & loc,
-                           std::string_view             fmt, Args &&... args )
+    static void FatalImpl( const std::source_location & loc, std::string_view fmt,
+                           Args &&... args )
     {
       Log( loc, LogSeverity::m_Fatal, fmt, std::forward<Args>( args )... );
 
@@ -127,30 +138,29 @@ namespace Engine::Utility
     }
 
   private:
-    static void LogImpl( const LogMetadata & metadata,
-                         const LogMessage &  message );
+    static void LogImpl( const LogMetadata & metadata, const LogMessage & message );
 
     static LogSeverity s_LogSeverity;
     static bool        s_IsDebugBreakEnabled;
   };
 } // namespace Engine::Utility
 
-#define LOG_TRACE( fmt, ... )                                                  \
-  Engine::Utility::Logger::TraceImpl( std::source_location::current(),         \
-                                      fmt __VA_OPT__(, ) __VA_ARGS__ )
+#define LOG_TRACE( fmt, ... )                                                       \
+  Engine::Utility::Logger::TraceImpl( std::source_location::current(), fmt,         \
+                                      ##__VA_ARGS__ )
 
-#define LOG_INFO( fmt, ... )                                                   \
-  Engine::Utility::Logger::InfoImpl( std::source_location::current(),          \
-                                     fmt __VA_OPT__(, ) __VA_ARGS__ )
+#define LOG_INFO( fmt, ... )                                                        \
+  Engine::Utility::Logger::InfoImpl( std::source_location::current(), fmt,          \
+                                     ##__VA_ARGS__ )
 
-#define LOG_WARN( fmt, ... )                                                   \
-  Engine::Utility::Logger::WarnImpl( std::source_location::current(),          \
-                                     fmt __VA_OPT__(, ) __VA_ARGS__ )
+#define LOG_WARN( fmt, ... )                                                        \
+  Engine::Utility::Logger::WarnImpl( std::source_location::current(), fmt,          \
+                                     ##__VA_ARGS__ )
 
-#define LOG_ERROR( fmt, ... )                                                  \
-  Engine::Utility::Logger::ErrorImpl( std::source_location::current(),         \
-                                      fmt __VA_OPT__(, ) __VA_ARGS__ )
+#define LOG_ERROR( fmt, ... )                                                       \
+  Engine::Utility::Logger::ErrorImpl( std::source_location::current(), fmt,         \
+                                      ##__VA_ARGS__ )
 
-#define LOG_FATAL( fmt, ... )                                                  \
-  Engine::Utility::Logger::FatalImpl( std::source_location::current(),         \
-                                      fmt __VA_OPT__(, ) __VA_ARGS__ )
+#define LOG_FATAL( fmt, ... )                                                       \
+  Engine::Utility::Logger::FatalImpl( std::source_location::current(), fmt,         \
+                                      ##__VA_ARGS__ )

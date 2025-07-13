@@ -1,8 +1,18 @@
+/*--------------------------------------------------------------------------------*
+  Copyright Nintendo.  All rights reserved.
+
+  These coded instructions, statements, and computer programs contain proprietary
+  information of Nintendo and/or its licensed developers and are protected by
+  national and international copyright laws. They may not be disclosed to third
+  parties or copied or duplicated in any form, in whole or in part, without the
+  prior written consent of Nintendo.
+
+  The content herein is highly confidential and should be handled accordingly.
+ *--------------------------------------------------------------------------------*/
+
 #pragma once
-#include <functional>
 
-#if defined( PLATFORM_WIN32 )
-
+#if defined( _WIN32 )
 #include <Windows.h>
 
 #include "Engine/Platform/Window.hpp"
@@ -27,13 +37,12 @@ namespace Engine::Platform::Win32
     [[nodiscard]] bool ShouldClose() const override;
     void               Close() override;
 
-    [[nodiscard]] std::vector<const char *>
-                              GetRequiredExtensions() const override;
-    [[nodiscard]] std::string GetTitle() const override;
-    [[nodiscard]] u32         GetWidth() const override;
-    [[nodiscard]] u32         GetHeight() const override;
-    [[nodiscard]] bool        IsVsynced() const override;
-    [[nodiscard]] bool        IsFullScreen() const override;
+    [[nodiscard]] std::vector<const char *> GetRequiredExtensions() const override;
+    [[nodiscard]] std::string               GetTitle() const override;
+    [[nodiscard]] u32                       GetWidth() const override;
+    [[nodiscard]] u32                       GetHeight() const override;
+    [[nodiscard]] bool                      IsVsynced() const override;
+    [[nodiscard]] bool                      IsFullScreen() const override;
 
     [[nodiscard]] void * GetNativeHandle() const override;
 
@@ -42,9 +51,9 @@ namespace Engine::Platform::Win32
     void SetVsync( bool isEnabled ) override;
     void SetFullScreen( bool isEnabled ) override;
 
-    std::uint8_t AddEventListener( EventCallback callback ) override;
-    bool         RemoveEventListener( u8 id ) override;
-    void         ClearEventListeners() override;
+    u8   AddEventListener( EventCallback callback ) override;
+    bool RemoveEventListener( u8 id ) override;
+    void ClearEventListeners() override;
 
   private:
     struct WindowData
@@ -75,5 +84,4 @@ namespace Engine::Platform::Win32
     static constexpr auto s_pClassName = L"Win32Window";
   };
 } // namespace Engine::Platform::Win32
-
 #endif

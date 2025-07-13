@@ -1,3 +1,15 @@
+/*--------------------------------------------------------------------------------*
+  Copyright Nintendo.  All rights reserved.
+
+  These coded instructions, statements, and computer programs contain proprietary
+  information of Nintendo and/or its licensed developers and are protected by
+  national and international copyright laws. They may not be disclosed to third
+  parties or copied or duplicated in any form, in whole or in part, without the
+  prior written consent of Nintendo.
+
+  The content herein is highly confidential and should be handled accordingly.
+ *--------------------------------------------------------------------------------*/
+
 #include <set>
 
 #include "Engine/Utility/Logger.hpp"
@@ -85,12 +97,11 @@ namespace Engine::Renderer
     m_QueueFamilyIndices = GetQueueFamilies( m_pPhysicalDevice, surface );
 
     std::vector<vk::DeviceQueueCreateInfo> queueInfos;
-    const std::set<u32>                    UniqueFamilies = {
-      m_QueueFamilyIndices.m_GraphicsFamily.value(),
-      m_QueueFamilyIndices.m_PresentFamily.value() };
+    const std::set UniqueFamilies = { m_QueueFamilyIndices.m_GraphicsFamily.value(),
+                                      m_QueueFamilyIndices.m_PresentFamily.value() };
 
     constexpr f32 Priority = 1.0f;
-    for ( const u32 Family : UniqueFamilies )
+    for ( const auto Family : UniqueFamilies )
     {
       vk::DeviceQueueCreateInfo queue = {};
       queue.queueFamilyIndex          = Family;
@@ -155,9 +166,9 @@ namespace Engine::Renderer
   bool Device::IsDeviceSuitable( const vk::raii::PhysicalDevice & device,
                                  const vk::raii::SurfaceKHR &     surface )
   {
-    const QueueFamilyIndices Indices     = GetQueueFamilies( device, surface );
-    const bool               IsSupported = IsExtensionSupported( device );
-    bool                     isValidSwapChain = false;
+    const auto Indices          = GetQueueFamilies( device, surface );
+    const bool IsSupported      = IsExtensionSupported( device );
+    bool       isValidSwapChain = false;
 
     if ( IsSupported )
     {
@@ -172,9 +183,8 @@ namespace Engine::Renderer
 
   bool Device::IsExtensionSupported( const vk::raii::PhysicalDevice & device )
   {
-    const auto Supported = device.enumerateDeviceExtensionProperties();
-    std::set<std::string> required = { s_Extensions.begin(),
-                                       s_Extensions.end() };
+    const auto            Supported = device.enumerateDeviceExtensionProperties();
+    std::set<std::string> required  = { s_Extensions.begin(), s_Extensions.end() };
 
     for ( const auto & Extension : Supported )
     {

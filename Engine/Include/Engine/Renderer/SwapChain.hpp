@@ -1,3 +1,15 @@
+/*--------------------------------------------------------------------------------*
+  Copyright Nintendo.  All rights reserved.
+
+  These coded instructions, statements, and computer programs contain proprietary
+  information of Nintendo and/or its licensed developers and are protected by
+  national and international copyright laws. They may not be disclosed to third
+  parties or copied or duplicated in any form, in whole or in part, without the
+  prior written consent of Nintendo.
+
+  The content herein is highly confidential and should be handled accordingly.
+ *--------------------------------------------------------------------------------*/
+
 #pragma once
 
 #include <vulkan/vulkan_raii.hpp>
@@ -24,16 +36,14 @@ namespace Engine::Renderer
 
     void Recreate( u32 width, u32 height );
 
-    [[nodiscard]] const vk::raii::SwapchainKHR & Get() const;
-    [[nodiscard]] vk::Format                     GetImageFormat() const;
-    [[nodiscard]] vk::Extent2D                   GetExtent() const;
-    [[nodiscard]] const std::vector<vk::Image> & GetImages() const;
-    [[nodiscard]] const std::vector<vk::raii::ImageView> &
-    GetImageViews() const;
-    [[nodiscard]] const std::vector<vk::raii::Framebuffer> &
-                                               GetFramebuffers() const;
-    [[nodiscard]] const vk::raii::RenderPass & GetRenderPass() const;
-    [[nodiscard]] std::size_t                  GetImageCount() const;
+    [[nodiscard]] const vk::raii::SwapchainKHR &             Get() const;
+    [[nodiscard]] vk::Format                                 GetImageFormat() const;
+    [[nodiscard]] vk::Extent2D                               GetExtent() const;
+    [[nodiscard]] const std::vector<vk::Image> &             GetImages() const;
+    [[nodiscard]] const std::vector<vk::raii::ImageView> &   GetImageViews() const;
+    [[nodiscard]] const std::vector<vk::raii::Framebuffer> & GetFramebuffers() const;
+    [[nodiscard]] const vk::raii::RenderPass &               GetRenderPass() const;
+    [[nodiscard]] size                                       GetImageCount() const;
 
   private:
     struct SwapChainSupportDetails

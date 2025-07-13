@@ -12,16 +12,27 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Libraries)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Libraries)
 
 if (MSVC)
-    add_compile_options(/W4 /permissive- /Zc:__cplusplus /Zc:preprocessor /utf-8)
-    add_compile_definitions(STRICT NOMINMAX WIN32_EXTRA_LEAN VC_EXTRALEAN)
+    add_compile_options(
+            /W4
+            /permissive-
+            /Zc:preprocessor
+            /Zc:__cplusplus
+            /utf-8
+    )
+    add_compile_definitions(VC_EXTRALEAN)
 else ()
     add_compile_options(-Wall -Wextra -Wpedantic)
 endif ()
 
 if (WIN32)
-    add_compile_definitions(PLATFORM_WIN32=1 VK_USE_PLATFORM_WIN32_KHR)
-elseif (UNIX)
-    add_compile_definitions(PLATFORM_UNIX=1)
+    add_compile_definitions(
+            STRICT
+            WIN32_LEAN_AND_MEAN
+            NOMINMAX
+            UNICODE
+            _UNICODE
+            VK_USE_PLATFORM_WIN32_KHR
+    )
 endif ()
 
 find_package(Vulkan REQUIRED)

@@ -1,8 +1,6 @@
+#if defined( _WIN32 )
 #include <functional>
 #include <variant>
-
-#if defined( PLATFORM_WIN32 )
-
 #include <vector>
 #include <memory>
 
@@ -116,7 +114,7 @@ namespace Engine::Platform::Win32
   {
     m_Data.m_Title = title;
 
-    const auto Wide = Utility::String::ToUtf16( title );
+    const auto Wide = Utility::String::ToWide( title );
     SetWindowTextW( m_pHandle, Wide.c_str() );
   }
 
@@ -125,10 +123,9 @@ namespace Engine::Platform::Win32
     m_Data.m_Width = width;
     m_Data.m_Width = height;
 
-    RECT        rect  = { 0, 0, static_cast<LONG>( width ),
-                          static_cast<LONG>( height ) };
-    const DWORD Style = GetWindowLongPtrW( m_pHandle, GWL_STYLE );
-    AdjustWindowRect( &rect, Style, FALSE );
+    RECT rect = { 0, 0, static_cast<LONG>( width ), static_cast<LONG>( height ) };
+    const auto pStyle = GetWindowLongPtrW( m_pHandle, GWL_STYLE );
+    AdjustWindowRect( &rect, pStyle, FALSE );
 
     SetWindowPos( m_pHandle, nullptr, 0, 0, rect.right - rect.left,
                   rect.bottom - rect.top, SWP_NOMOVE | SWP_NOZORDER );
@@ -154,25 +151,22 @@ namespace Engine::Platform::Win32
       m_Data.m_WindowedStyle =
         static_cast<DWORD>( GetWindowLongPtrW( m_pHandle, GWL_STYLE ) );
 
-      HMONITOR monitor =
-        MonitorFromWindow( m_pHandle, MONITOR_DEFAULTTONEAREST );
-      MONITORINFO info = { sizeof( MONITORINFO ) };
-      GetMonitorInfoW( monitor, &info );
+      const auto  Monitor = MonitorFromWindow( m_pHandle, MONITOR_DEFAULTTONEAREST );
+      MONITORINFO info    = { sizeof( MONITORINFO ) };
+      GetMonitorInfoW( Monitor, &info );
 
       SetWindowLongPtrW( m_pHandle, GWL_STYLE, WS_POPUP );
-      SetWindowPos(
-        m_pHandle, HWND_TOP, info.rcMonitor.left, info.rcMonitor.top,
-        info.rcMonitor.right - info.rcMonitor.left,
-        info.rcMonitor.bottom - info.rcMonitor.top, SWP_FRAMECHANGED );
+      SetWindowPos( m_pHandle, HWND_TOP, info.rcMonitor.left, info.rcMonitor.top,
+                    info.rcMonitor.right - info.rcMonitor.left,
+                    info.rcMonitor.bottom - info.rcMonitor.top, SWP_FRAMECHANGED );
     }
     else
     {
       SetWindowLongPtrW( m_pHandle, GWL_STYLE, m_Data.m_WindowedStyle );
-      SetWindowPos( m_pHandle, nullptr, m_Data.m_WindowedRect.left,
-                    m_Data.m_WindowedRect.top,
-                    m_Data.m_WindowedRect.right - m_Data.m_WindowedRect.left,
-                    m_Data.m_WindowedRect.bottom - m_Data.m_WindowedRect.top,
-                    SWP_FRAMECHANGED );
+      SetWindowPos(
+        m_pHandle, nullptr, m_Data.m_WindowedRect.left, m_Data.m_WindowedRect.top,
+        m_Data.m_WindowedRect.right - m_Data.m_WindowedRect.left,
+        m_Data.m_WindowedRect.bottom - m_Data.m_WindowedRect.top, SWP_FRAMECHANGED );
     }
   }
 
@@ -188,8 +182,7 @@ namespace Engine::Platform::Win32
 
     LOG_INFO( "Creating Win32 window... (title={}, width={}, "
               "height={}, vsynced={})",
-              m_Data.m_Title, m_Data.m_Width, m_Data.m_Height,
-              m_Data.m_IsVsynced );
+              m_Data.m_Title, m_Data.m_Width, m_Data.m_Height, m_Data.m_IsVsynced );
 
     if ( !s_IsClassRegistered )
     {
@@ -213,7 +206,7 @@ namespace Engine::Platform::Win32
       s_IsClassRegistered = true;
     }
 
-    DWORD style = WS_OVERLAPPEDWINDOW;
+    auto style = WS_OVERLAPPEDWINDOW;
     if ( !props.m_IsResizable )
     {
       style &= ~( WS_THICKFRAME | WS_MAXIMIZEBOX );
@@ -228,18 +221,18 @@ namespace Engine::Platform::Win32
                         static_cast<LONG>( props.m_Height ) };
     AdjustWindowRect( &windowRect, style, FALSE );
 
-    const i32 WindowWidth  = windowRect.right - windowRect.left;
-    const i32 WindowHeight = windowRect.bottom - windowRect.top;
+    const auto WindowWidth  = windowRect.right - windowRect.left;
+    const auto WindowHeight = windowRect.bottom - windowRect.top;
 
-    const i32 ScreenWidth  = GetSystemMetrics( SM_CXSCREEN );
-    const i32 ScreenHeight = GetSystemMetrics( SM_CYSCREEN );
-    const i32 WindowX      = ( ScreenWidth - WindowWidth ) / 2;
-    const i32 WindowY      = ( ScreenHeight - WindowHeight ) / 2;
+    const auto ScreenWidth  = GetSystemMetrics( SM_CXSCREEN );
+    const auto ScreenHeight = GetSystemMetrics( SM_CYSCREEN );
+    const auto WindowX      = ( ScreenWidth - WindowWidth ) / 2;
+    const auto WindowY      = ( ScreenHeight - WindowHeight ) / 2;
 
-    const auto Wide = Utility::String::ToUtf16( props.m_Title );
-    m_pHandle = CreateWindowExW( 0, s_pClassName, Wide.c_str(), style, WindowX,
-                                 WindowY, WindowWidth, WindowHeight, nullptr,
-                                 nullptr, m_pInstance, &m_Data );
+    const auto Wide = Utility::String::ToWide( props.m_Title );
+    m_pHandle       = CreateWindowExW( 0, s_pClassName, Wide.c_str(), style, WindowX,
+                                       WindowY, WindowWidth, WindowHeight, nullptr,
+                                       nullptr, m_pInstance, &m_Data );
 
     if ( !m_pHandle )
     {
@@ -260,8 +253,7 @@ namespace Engine::Platform::Win32
 
     LOG_INFO( "Successfully created Win32 window (title={}, width ={}, "
               "height={}, vsynced={})",
-              m_Data.m_Title, m_Data.m_Width, m_Data.m_Height,
-              m_Data.m_IsVsynced );
+              m_Data.m_Title, m_Data.m_Width, m_Data.m_Height, m_Data.m_IsVsynced );
   }
 
   LRESULT CALLBACK Win32Window::WindowProc( HWND hWnd, const UINT uMsg,
@@ -274,13 +266,12 @@ namespace Engine::Platform::Win32
     {
       const auto pCreateStruct = reinterpret_cast<CREATESTRUCTW *>( lParam );
       pData = static_cast<WindowData *>( pCreateStruct->lpCreateParams );
-      SetWindowLongPtrW( hWnd, GWLP_USERDATA,
-                         reinterpret_cast<LONG_PTR>( pData ) );
+      SetWindowLongPtrW( hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>( pData ) );
     }
     else
     {
-      pData = reinterpret_cast<WindowData *>(
-        GetWindowLongPtrW( hWnd, GWLP_USERDATA ) );
+      pData =
+        reinterpret_cast<WindowData *>( GetWindowLongPtrW( hWnd, GWLP_USERDATA ) );
     }
 
     if ( !pData )
@@ -309,8 +300,8 @@ namespace Engine::Platform::Win32
 
       case WM_SIZE:
       {
-        const u32 NewWidth  = LOWORD( lParam );
-        const u32 NewHeight = HIWORD( lParam );
+        const auto NewWidth  = LOWORD( lParam );
+        const auto NewHeight = HIWORD( lParam );
 
         m_Data.m_Width  = NewWidth;
         m_Data.m_Height = NewHeight;
@@ -339,8 +330,8 @@ namespace Engine::Platform::Win32
 
       case WM_MOVE:
       {
-        const i32 X = LOWORD( lParam );
-        const i32 Y = HIWORD( lParam );
+        const auto X = LOWORD( lParam );
+        const auto Y = HIWORD( lParam );
 
         WindowMovedEvent event = {};
         event.m_X              = X;
@@ -354,10 +345,9 @@ namespace Engine::Platform::Win32
         /* fall through */
       case WM_SYSKEYDOWN:
       {
-        const auto Key = static_cast<KeyCode>( wParam );
-        const u8   RepeatCount =
-          static_cast<u8>( lParam & 0xFF ); // lParam & 0xFFFF
-                                            // for UNICODE?
+        const auto Key         = static_cast<KeyCode>( wParam );
+        const auto RepeatCount = static_cast<u8>( lParam & 0xFF ); // lParam & 0xFFFF
+                                                                   // for UNICODE?
 
         KeyPressedEvent event = {};
         event.m_Key           = Key;
@@ -447,8 +437,8 @@ namespace Engine::Platform::Win32
 
       case WM_MOUSEMOVE:
       {
-        const f32 X = LOWORD( lParam );
-        const f32 Y = HIWORD( lParam );
+        const auto X = LOWORD( lParam );
+        const auto Y = HIWORD( lParam );
 
         MouseMovedEvent event = {};
         event.m_X             = X;
@@ -460,8 +450,8 @@ namespace Engine::Platform::Win32
 
       case WM_MOUSEWHEEL:
       {
-        const f32 Delta = static_cast<f32>( GET_WHEEL_DELTA_WPARAM( wParam ) ) /
-                          static_cast<f32>( WHEEL_DELTA );
+        const auto Delta = static_cast<f32>( GET_WHEEL_DELTA_WPARAM( wParam ) ) /
+                           static_cast<f32>( WHEEL_DELTA );
 
         MouseScrolledEvent event = {};
         event.m_XOffset          = 0.0f;
@@ -473,8 +463,8 @@ namespace Engine::Platform::Win32
 
       case WM_MOUSEHWHEEL:
       {
-        const f32 Delta = static_cast<f32>( GET_WHEEL_DELTA_WPARAM( wParam ) ) /
-                          static_cast<f32>( WHEEL_DELTA );
+        const auto Delta = static_cast<f32>( GET_WHEEL_DELTA_WPARAM( wParam ) ) /
+                           static_cast<f32>( WHEEL_DELTA );
 
         MouseScrolledEvent event = {};
         event.m_XOffset          = Delta;
@@ -493,7 +483,7 @@ namespace Engine::Platform::Win32
     return DefWindowProcW( hWnd, uMsg, wParam, lParam );
   }
 
-  std::uint8_t Win32Window::AddEventListener( EventCallback callback )
+  u8 Win32Window::AddEventListener( EventCallback callback )
   {
     return Window::AddEventListener( std::move( callback ) );
   }
